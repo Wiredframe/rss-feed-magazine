@@ -17,17 +17,22 @@
                 <outlet property="checkForUpdatesMenuItem" destination="1nF-7O-aKU" id="JmT-jc-DJ8"/>
                 <outlet property="debugMenuItem" destination="UqE-mp-gtV" id="OnR-lr-Zlt"/>
                 <outlet property="useColumnLayoutMenuItem" destination="ucL-ay-0ut" id="ucL-ou-tl1"/>
+                <outlet property="showTimelineImagesMenuItem" destination="tLi-mG-mI1" id="tLi-mG-ou1"/>
+                <outlet property="useMagazineLayoutMenuItem" destination="mGz-ly-mI1" id="mGz-ly-ou1"/>
+                <outlet property="fadeReadArticlesMenuItem" destination="mGz-fd-mI1" id="mGz-fd-ou1"/>
+                <outlet property="showReadArticlesInFoldersMenuItem" destination="sRF-fd-mI1" id="sRF-fd-ou1"/>
+                <outlet property="articlesPerViewMenu" destination="aPV-mn-mn1" id="aPV-mn-ou1"/>
                 <outlet property="showStatusBarMenuItem" destination="stB-ar-mI1" id="stB-ar-oU1"/>
                 <outlet property="showStatusBarThemeMenuMenuItem" destination="stT-hm-mI1" id="stT-hm-oU1"/>
             </connections>
         </customObject>
         <menu title="Main Menu" systemMenu="main" id="AYu-sK-qS6">
             <items>
-                <menuItem title="NetNewsWire" id="1Xt-HY-uBw">
+                <menuItem title="RSS Feed Magazine" id="1Xt-HY-uBw">
                     <modifierMask key="keyEquivalentModifierMask"/>
-                    <menu key="submenu" title="NetNewsWire" systemMenu="apple" id="uQy-DD-JDr">
+                    <menu key="submenu" title="RSS Feed Magazine" systemMenu="apple" id="uQy-DD-JDr">
                         <items>
-                            <menuItem title="About NetNewsWire" id="5kV-Vb-QxS">
+                            <menuItem title="About RSS Feed Magazine" id="5kV-Vb-QxS">
                                 <modifierMask key="keyEquivalentModifierMask"/>
                                 <connections>
                                     <action selector="showCustomAboutPanel:" target="Voe-Tx-rLC" id="ZQV-QH-KmS"/>
@@ -51,7 +56,7 @@
                                 <menu key="submenu" title="Services" systemMenu="services" id="hz9-B4-Xy5"/>
                             </menuItem>
                             <menuItem isSeparatorItem="YES" id="4je-JR-u6R"/>
-                            <menuItem title="Hide NetNewsWire" keyEquivalent="h" id="Olw-nP-bQN">
+                            <menuItem title="Hide RSS Feed Magazine" keyEquivalent="h" id="Olw-nP-bQN">
                                 <connections>
                                     <action selector="hide:" target="-1" id="PnN-Uc-m68"/>
                                 </connections>
@@ -69,7 +74,7 @@
                                 </connections>
                             </menuItem>
                             <menuItem isSeparatorItem="YES" id="kCx-OE-vgT"/>
-                            <menuItem title="Quit NetNewsWire" keyEquivalent="q" id="4sb-4s-VLi">
+                            <menuItem title="Quit RSS Feed Magazine" keyEquivalent="q" id="4sb-4s-VLi">
                                 <connections>
                                     <action selector="terminate:" target="-1" id="Te7-pn-YzF"/>
                                 </connections>
@@ -115,6 +120,12 @@
                                 <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
                                 <connections>
                                     <action selector="exportOPML:" target="-1" id="5Zy-m4-cE9"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem title="Export Magazine as PDF…" id="mGz-pd-mI1">
+                                <modifierMask key="keyEquivalentModifierMask"/>
+                                <connections>
+                                    <action selector="exportMagazinePDF:" target="-1" id="mGz-pd-aC1"/>
                                 </connections>
                             </menuItem>
                             <menuItem isSeparatorItem="YES" id="FYN-zt-6dI"/>
@@ -440,6 +451,67 @@
                                     <action selector="toggleColumnLayout:" target="Voe-Tx-rLC" id="ucL-ac-t0n"/>
                                 </connections>
                             </menuItem>
+                            <menuItem title="Use Magazine Layout" id="mGz-ly-mI1">
+                                <modifierMask key="keyEquivalentModifierMask"/>
+                                <connections>
+                                    <action selector="toggleMagazineLayout:" target="Voe-Tx-rLC" id="mGz-ly-aC1"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem title="Show Read Articles in Folders" id="sRF-fd-mI1">
+                                <modifierMask key="keyEquivalentModifierMask"/>
+                                <connections>
+                                    <action selector="toggleShowReadArticlesInFolders:" target="Voe-Tx-rLC" id="sRF-fd-aC1"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem title="Articles per View" id="aPV-mn-mI1">
+                                <modifierMask key="keyEquivalentModifierMask"/>
+                                <menu key="submenu" title="Articles per View" id="aPV-mn-mn1">
+                                    <items>
+                                        <menuItem title="50" tag="50" id="aPV-0-mI1">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <connections>
+                                                <action selector="setArticlesPerView:" target="Voe-Tx-rLC" id="aPV-0-aC1"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="100" tag="100" id="aPV-1-mI1">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <connections>
+                                                <action selector="setArticlesPerView:" target="Voe-Tx-rLC" id="aPV-1-aC1"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="200" tag="200" id="aPV-2-mI1">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <connections>
+                                                <action selector="setArticlesPerView:" target="Voe-Tx-rLC" id="aPV-2-aC1"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="500" tag="500" id="aPV-3-mI1">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <connections>
+                                                <action selector="setArticlesPerView:" target="Voe-Tx-rLC" id="aPV-3-aC1"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="All" tag="0" id="aPV-4-mI1">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <connections>
+                                                <action selector="setArticlesPerView:" target="Voe-Tx-rLC" id="aPV-4-aC1"/>
+                                            </connections>
+                                        </menuItem>
+                                    </items>
+                                </menu>
+                            </menuItem>
+                            <menuItem title="Fade Read Articles in Magazine" id="mGz-fd-mI1">
+                                <modifierMask key="keyEquivalentModifierMask"/>
+                                <connections>
+                                    <action selector="toggleFadeReadArticles:" target="Voe-Tx-rLC" id="mGz-fd-aC1"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem title="Show Images in Timeline" id="tLi-mG-mI1">
+                                <modifierMask key="keyEquivalentModifierMask"/>
+                                <connections>
+                                    <action selector="toggleTimelineImages:" target="Voe-Tx-rLC" id="tLi-mG-aC1"/>
+                                </connections>
+                            </menuItem>
                             <menuItem title="Show Status Bar" id="stB-ar-mI1">
                                 <modifierMask key="keyEquivalentModifierMask"/>
                                 <connections>
@@ -687,7 +759,7 @@
                     <modifierMask key="keyEquivalentModifierMask"/>
                     <menu key="submenu" title="Help" systemMenu="help" id="F2S-fz-NVQ">
                         <items>
-                            <menuItem title="NetNewsWire Help" keyEquivalent="?" id="FKE-Sm-Kum">
+                            <menuItem title="RSS Feed Magazine Help" keyEquivalent="?" id="FKE-Sm-Kum">
                                 <connections>
                                     <action selector="showHelp:" target="Voe-Tx-rLC" id="WJP-8V-s4K"/>
                                 </connections>
@@ -699,12 +771,6 @@
                                 </connections>
                             </menuItem>
                             <menuItem isSeparatorItem="YES" id="iyN-Fr-QXC"/>
-                            <menuItem title="Add NetNewsWire News Feed" id="cmP-uH-mS8">
-                                <modifierMask key="keyEquivalentModifierMask"/>
-                                <connections>
-                                    <action selector="addAppNews:" target="-1" id="xHC-9j-EpT"/>
-                                </connections>
-                            </menuItem>
                             <menuItem title="Open Application Support Folder" id="QxZ-DC-21I">
                                 <modifierMask key="keyEquivalentModifierMask"/>
                                 <connections>
@@ -722,12 +788,6 @@
                                 <modifierMask key="keyEquivalentModifierMask"/>
                                 <connections>
                                     <action selector="openReleaseNotes:" target="-1" id="7LS-uW-Yp0"/>
-                                </connections>
-                            </menuItem>
-                            <menuItem title="How To Support NetNewsWire" id="kfC-NQ-g3E">
-                                <modifierMask key="keyEquivalentModifierMask"/>
-                                <connections>
-                                    <action selector="openHowToSupport:" target="-1" id="SIw-Ug-A4D"/>
                                 </connections>
                             </menuItem>
                             <menuItem title="GitHub Repository" id="QfD-Xw-sdF">

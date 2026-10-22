@@ -23,6 +23,8 @@ final class RSSItem {
 	var dateModified: Date?
 	var authors: Set<ParsedAuthor> = []
 	var attachments: Set<ParsedAttachment> = []
+	private(set) var imageURL: String?
+	private var imageScore = -1
 
 	/// Returns `guid` if present. Otherwise MD5-hashes available properties
 	/// to build the most likely stable ID.
@@ -62,6 +64,20 @@ final class RSSItem {
 		return s.md5String
 	}
 
+	/// Keeps the best image from Media RSS (media:content, media:thumbnail), image enclosures, and metaplus:
+	/// the widest, where a width is given; otherwise media:content over enclosures over thumbnails.
+	/// (GameStar puts a 127 pixel enclosure before a 1920 pixel media:content, neither with a width.)
+	func addImageCandidate(url: String, width: Int?, isThumbnail: Bool, isEnclosure: Bool = false) {
+		guard !url.isEmpty else {
+			return
+		}
+		let score = width ?? (isThumbnail ? 100 : isEnclosure ? 1000 : 1100)
+		if score > imageScore {
+			imageURL = url
+			imageScore = score
+		}
+	}
+
 	func toParsedItem(feedURL: String) -> ParsedItem {
 		// If body is empty and summary has content,
 		// promote summary to body and drop summary.
@@ -84,7 +100,7 @@ final class RSSItem {
 			contentText: nil,
 			markdown: markdown,
 			summary: itemSummary,
-			imageURL: nil,
+			imageURL: imageURL,
 			bannerImageURL: nil,
 			datePublished: datePublished,
 			dateModified: dateModified,

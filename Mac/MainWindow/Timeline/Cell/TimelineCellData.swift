@@ -23,10 +23,12 @@ import Images
 	let showFeedName: TimelineShowFeedName
 	let iconImage: IconImage? // feed icon, user avatar, or favicon
 	let showIcon: Bool // Make space even when icon is nil
+	let imageURL: String? // Article image shown below the text; space is reserved even before it loads
+	let image: NSImage?
 	let read: Bool
 	let starred: Bool
 
-	init(article: Article, showFeedName: TimelineShowFeedName, feedName: String?, byline: String?, iconImage: IconImage?, showIcon: Bool) {
+	init(article: Article, showFeedName: TimelineShowFeedName, feedName: String?, byline: String?, iconImage: IconImage?, showIcon: Bool, imageURL: String? = nil, image: NSImage? = nil) {
 
 		self.title = ArticleStringFormatter.shared.truncatedTitle(article)
 		self.attributedTitle = ArticleStringFormatter.shared.attributedTruncatedTitle(article)
@@ -51,6 +53,9 @@ import Images
 		self.showIcon = showIcon
 		self.iconImage = iconImage
 
+		self.imageURL = imageURL
+		self.image = image
+
 		self.read = article.status.read
 		self.starred = article.status.starred
 	}
@@ -73,6 +78,8 @@ import Images
 		self.showFeedName = .none
 		self.showIcon = false
 		self.iconImage = nil
+		self.imageURL = nil
+		self.image = nil
 		self.read = true
 		self.starred = false
 		self.attributedTitle = NSAttributedString()

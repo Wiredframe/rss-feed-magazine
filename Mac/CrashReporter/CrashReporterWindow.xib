@@ -27,7 +27,7 @@
                     <textField focusRingType="none" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="QBv-7S-WQv">
                         <rect key="frame" x="18" y="459" width="460" height="19"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                        <textFieldCell key="cell" selectable="YES" title="NetNewsWire Crash Log Found" id="k6r-PA-hYf">
+                        <textFieldCell key="cell" selectable="YES" title="RSS Feed Magazine Crash Log Found" id="k6r-PA-hYf">
                             <font key="font" metaFont="systemBold" size="16"/>
                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
                             <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>

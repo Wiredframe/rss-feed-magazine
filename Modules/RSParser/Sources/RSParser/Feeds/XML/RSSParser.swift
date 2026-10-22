@@ -38,6 +38,8 @@ private final class RSSDelegate: XMLSAXParserDelegate {
 	private var parsingChannelImage = false
 	private var parsingTextInput = false
 	private var currentAttributes: [String: String] = [:]
+	private var metaPlusImageURL: String? // Inside <mp:image>
+	private var metaPlusImageWidth: Int?
 
 	// Keep track of depth to ignore unprefixed <title> (for instance)
 	// inside of namespaced section (<s:variant>, for instance).
@@ -86,6 +88,20 @@ private final class RSSDelegate: XMLSAXParserDelegate {
 
 		if namespaceElementDepth > 0 {
 			namespaceElementDepth += 1
+			return
+		}
+		if parsingArticle && namespace.isMediaRSS {
+			// Media RSS: take images, look inside media:group, skip the rest.
+			if let item = currentItem {
+				MediaRSS.addImage(localName: localName, attributes: attributes.dictionary(), to: item, resolve: resolveURL)
+			}
+			return
+		}
+		if parsingArticle && namespace.isMetaPlus {
+			// <mp:image><mp:width>996</mp:width><mp:data>https://…</mp:data></mp:image>
+			if localName.equals("data") || localName.equals("width") {
+				parser.beginStoringCharacters()
+			}
 			return
 		}
 		if parsingArticle && namespace.prefix != nil
@@ -162,6 +178,13 @@ private final class RSSDelegate: XMLSAXParserDelegate {
 
 		if namespaceElementDepth > 0 {
 			namespaceElementDepth -= 1
+			return
+		}
+		if parsingArticle && namespace.isMediaRSS {
+			return
+		}
+		if parsingArticle && namespace.isMetaPlus {
+			handleMetaPlusEnd(localName, parser: parser)
 			return
 		}
 
@@ -286,6 +309,20 @@ private final class RSSDelegate: XMLSAXParserDelegate {
 		}
 	}
 
+	private func handleMetaPlusEnd(_ localName: ArraySlice<UInt8>, parser: XMLSAXParser) {
+		if localName.equals("data") {
+			metaPlusImageURL = parser.currentStringWithTrimmedWhitespace
+		} else if localName.equals("width") {
+			metaPlusImageWidth = parser.currentStringWithTrimmedWhitespace.flatMap { Int($0) }
+		} else if localName.equals("image") {
+			if let url = metaPlusImageURL, let item = currentItem {
+				item.addImageCandidate(url: resolveURL(url), width: metaPlusImageWidth, isThumbnail: false)
+			}
+			metaPlusImageURL = nil
+			metaPlusImageWidth = nil
+		}
+	}
+
 	private func handleEnclosure(article: RSSItem) {
 		guard let url = currentAttributes["url"], !url.isEmpty else {
 			return
@@ -295,6 +332,9 @@ private final class RSSDelegate: XMLSAXParserDelegate {
 		let sizeInBytes = length > 0 ? length : nil
 		if let attachment = ParsedAttachment(url: url, mimeType: mimeType, title: nil, sizeInBytes: sizeInBytes, durationInSeconds: nil) {
 			article.attachments.insert(attachment)
+		}
+		if mimeType?.hasPrefix("image/") == true {
+			article.addImageCandidate(url: resolveURL(url), width: nil, isThumbnail: false, isEnclosure: true)
 		}
 	}
 

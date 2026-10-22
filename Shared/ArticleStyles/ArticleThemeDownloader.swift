@@ -22,13 +22,13 @@ public final class ArticleThemeDownloader: Sendable {
 		public var errorDescription: String? {
 			switch self {
 			case .downloadFailed:
-				return "The NetNewsWire theme could not be downloaded."
+				return "The theme could not be downloaded."
 			case .noThemeFile:
-				return "There is no NetNewsWire theme available."
+				return "There is no theme available."
 			case .tooLarge:
-				return "The NetNewsWire theme is too large."
+				return "The theme is too large."
 			case .unsupportedURLScheme:
-				return "A NetNewsWire theme can be downloaded only from an http or https URL."
+				return "A theme can be downloaded only from an http or https URL."
 			}
 		}
 	}

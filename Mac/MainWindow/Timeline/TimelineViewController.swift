@@ -18,6 +18,7 @@ import Images
 	func timelineRequestedFeedSelection(_: TimelineViewController, feed: Feed)
 	func timelineInvalidatedRestorationState(_: TimelineViewController)
 	func timelineRequestedSortChange(_: TimelineViewController, parameters: ArticleSortParameters)
+	func timelineArticlesDidChange(_: TimelineViewController)
 }
 
 enum TimelineShowFeedName: Sendable {
@@ -126,6 +127,7 @@ final class TimelineViewController: NSViewController, UndoableCommandRunner, Unr
 			if articles == oldValue {
 				return
 			}
+			delegate?.timelineArticlesDidChange(self)
 
 			if articles.representSameArticlesInSameOrder(as: oldValue) {
 				// When the array is the same — same articles, same order —
@@ -181,8 +183,19 @@ final class TimelineViewController: NSViewController, UndoableCommandRunner, Unr
 		}
 	}
 
-	private var showIcons = false
+	private var showIcons = false {
+		didSet {
+			if showIcons != oldValue {
+				updateAdditionalHeightForImage()
+			}
+		}
+	}
 	private var currentRowHeight: CGFloat = 0.0
+	private var showImages = AppDefaults.shared.timelineShowsImages
+	private var foldersShowReadArticles = AppDefaults.shared.foldersShowReadArticles
+	private var articlesPerView = AppDefaults.shared.articlesPerView
+	private var articlesWereLimited = false // More articles than View > Articles per View allows
+	private var additionalHeightForImage: CGFloat = 0.0
 
 	private var didRegisterForNotifications = false
 	static let fetchAndMergeArticlesQueue = CoalescingQueue(name: "Fetch and Merge Articles", interval: 0.5, maxInterval: 2.0)
@@ -258,6 +271,7 @@ final class TimelineViewController: NSViewController, UndoableCommandRunner, Unr
 			NotificationCenter.default.addObserver(self, selector: #selector(feedIconDidBecomeAvailable(_:)), name: .feedIconDidBecomeAvailable, object: nil)
 			NotificationCenter.default.addObserver(self, selector: #selector(avatarDidBecomeAvailable(_:)), name: .AvatarDidBecomeAvailable, object: nil)
 			NotificationCenter.default.addObserver(self, selector: #selector(faviconDidBecomeAvailable(_:)), name: .FaviconDidBecomeAvailable, object: nil)
+			NotificationCenter.default.addObserver(self, selector: #selector(timelineImageDidBecomeAvailable(_:)), name: .timelineImageDidBecomeAvailable, object: nil)
 			NotificationCenter.default.addObserver(self, selector: #selector(accountDidDownloadArticles(_:)), name: .AccountDidDownloadArticles, object: nil)
 			NotificationCenter.default.addObserver(self, selector: #selector(accountStateDidChange(_:)), name: .AccountStateDidChange, object: nil)
 			NotificationCenter.default.addObserver(self, selector: #selector(accountsDidChange(_:)), name: .UserDidAddAccount, object: nil)
@@ -282,12 +296,22 @@ final class TimelineViewController: NSViewController, UndoableCommandRunner, Unr
 	override func viewDidLayout() {
 		super.viewDidLayout()
 		fitTableViewToVisibleWidthInStandardLayout()
+		updateAdditionalHeightForImage()
 	}
 
 	// MARK: - API
 
 	func markAllAsRead(completion: (() -> Void)? = nil) {
-		guard let undoManager = undoManager, let markReadCommand = MarkStatusCommand(initialArticles: articles, markingRead: true, undoManager: undoManager, completion: completion) else {
+		// With View > Articles per View, the timeline may show only the newest articles. All means all.
+		var articlesToMark = articles
+		if articlesWereLimited {
+			let shownIDs = Set(articles.map(\.articleID))
+			let fetchers = (representedObjects ?? []).compactMap { $0 as? ArticleFetcher }
+			for fetcher in fetchers {
+				articlesToMark += fetcher.fetchUnreadArticles().filter { !shownIDs.contains($0.articleID) }
+			}
+		}
+		guard let undoManager = undoManager, let markReadCommand = MarkStatusCommand(initialArticles: articlesToMark, markingRead: true, undoManager: undoManager, completion: completion) else {
 			completion?()
 			return
 		}
@@ -295,7 +319,7 @@ final class TimelineViewController: NSViewController, UndoableCommandRunner, Unr
 	}
 
 	func canMarkAllAsRead() -> Bool {
-		return articles.canMarkAllAsRead()
+		return articles.canMarkAllAsRead() || articlesWereLimited
 	}
 
 	func canMarkSelectedArticlesAsRead() -> Bool {
@@ -343,6 +367,9 @@ final class TimelineViewController: NSViewController, UndoableCommandRunner, Unr
 	func restoreState(from state: TimelineWindowState) {
 		for i in 0..<state.readArticlesFilterStateKeys.count {
 			if let sidebarItemID = SidebarItemIdentifier(userInfo: state.readArticlesFilterStateKeys[i]) {
+				if case .folder = sidebarItemID {
+					continue // Folders start as View > Show Read Articles in Folders says
+				}
 				let hidesReadArticles = state.readArticlesFilterStateValues[i]
 				if hidesReadArticles {
 					noteSidebarItemHidesReadArticles(sidebarItemID)
@@ -412,6 +439,25 @@ final class TimelineViewController: NSViewController, UndoableCommandRunner, Unr
 	}
 
 	// MARK: - Actions
+
+	/// The magazine has no selection: a click marks the article read and opens it in the browser.
+	func openArticleFromMagazine(_ article: Article) {
+		if !article.status.read {
+			markArticles(Set([article]), statusKey: .read, flag: true)
+		}
+		if let link = article.preferredLink {
+			Browser.open(link, invertPreference: NSApp.currentEvent?.modifierFlags.contains(.shift) ?? false)
+		}
+	}
+
+	/// The sidebar selection’s name, for the magazine’s masthead.
+	var magazineTitle: String {
+		if showsSearchResults {
+			return NSLocalizedString("Search", comment: "Magazine masthead for search results")
+		}
+		let names = (representedObjects ?? []).compactMap { ($0 as? DisplayNameProvider)?.nameForDisplay }
+		return names.joined(separator: ", ")
+	}
 
 	@objc func openArticleInBrowser(_ sender: Any?) {
 		if let link = oneSelectedArticle?.preferredLink {
@@ -730,6 +776,21 @@ final class TimelineViewController: NSViewController, UndoableCommandRunner, Unr
 		}
 	}
 
+	@objc func timelineImageDidBecomeAvailable(_ note: Notification) {
+		guard showsImagesInTimeline, let url = note.userInfo?["url"] as? String else {
+			return
+		}
+		let indexesToReload = tableView.indexesOfAvailableRowsPassingTest { (row) -> Bool in
+			guard let article = articles.articleAtRow(row) else {
+				return false
+			}
+			return TimelineImageFinder.shared.imageURL(for: article) == url
+		}
+		if let indexesToReload = indexesToReload {
+			reloadCells(for: indexesToReload)
+		}
+	}
+
 	@objc func accountDidDownloadArticles(_ note: Notification) {
 		guard let feeds = note.userInfo?[Account.UserInfoKey.feeds] as? Set<Feed> else {
 			return
@@ -777,11 +838,61 @@ final class TimelineViewController: NSViewController, UndoableCommandRunner, Unr
 
 	@MainActor func userDefaultsDidChange() {
 		fontSize = AppDefaults.shared.timelineFontSize
+		if foldersShowReadArticles != AppDefaults.shared.foldersShowReadArticles || articlesPerView != AppDefaults.shared.articlesPerView {
+			foldersShowReadArticles = AppDefaults.shared.foldersShowReadArticles
+			articlesPerView = AppDefaults.shared.articlesPerView
+			for sidebarItemID in readFilterEnabledTable.keys {
+				if case .folder = sidebarItemID {
+					readFilterEnabledTable[sidebarItemID] = nil
+				}
+			}
+			seedReadFilterForFolders()
+			delegate?.timelineInvalidatedRestorationState(self)
+			fetchAndReplacePreservingSelection()
+		}
+		if showImages != AppDefaults.shared.timelineShowsImages {
+			showImages = AppDefaults.shared.timelineShowsImages
+			performBlockAndRestoreSelection {
+				tableView.reloadData()
+			}
+		}
 	}
 
 	/// The one place the row height is set — it depends on the layout and the font size.
+	/// Rows with an article image add `additionalHeightForImage` to it.
 	func updateTableViewRowHeight() {
 		tableView.rowHeight = layout == .column ? columnRowHeight() : currentRowHeight
+		updateAdditionalHeightForImage()
+	}
+
+	private var showsImagesInTimeline: Bool {
+		layout == .standard && showImages
+	}
+
+	private func imageURL(forRow row: Int) -> String? {
+		guard showsImagesInTimeline, let article = articles.articleAtRow(row) else {
+			return nil
+		}
+		return TimelineImageFinder.shared.imageURL(for: article)
+	}
+
+	/// The image height follows the cell width, so this changes when the timeline is resized.
+	private func updateAdditionalHeightForImage() {
+		guard isViewLoaded, let appearance = showIcons ? cellAppearanceWithIcon : cellAppearance else {
+			return
+		}
+		let cellWidth = tableView.numberOfRows > 0 ? tableView.frameOfCell(atColumn: 0, row: 0).width : tableView.bounds.width
+		let height = TimelineCellLayout.additionalHeightForImage(cellWidth: cellWidth, appearance: appearance)
+		if height == additionalHeightForImage {
+			return
+		}
+		additionalHeightForImage = height
+		if showsImagesInTimeline && tableView.numberOfRows > 0 {
+			NSAnimationContext.runAnimationGroup { context in
+				context.duration = 0
+				tableView.noteHeightOfRows(withIndexesChanged: IndexSet(integersIn: 0..<tableView.numberOfRows))
+			}
+		}
 	}
 
 	// MARK: - Reloading Data
@@ -930,6 +1041,9 @@ extension TimelineViewController: NSTableViewDataSource {
 	func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat {
 		// Keeping -[NSTableViewDelegate tableView:heightOfRow:] implemented fixes
 		// an issue that the bottom inset of NSTableView disappears on macOS Monterey.
+		if imageURL(forRow: row) != nil {
+			return tableView.rowHeight + additionalHeightForImage
+		}
 		return tableView.rowHeight
 	}
 }
@@ -1011,7 +1125,13 @@ extension TimelineViewController: NSTableViewDelegate {
 	private func configureTimelineCell(_ cell: TimelineTableCellView, article: Article) {
 		cell.objectValue = article
 		let iconImage = article.iconImage()
-		cell.cellData = TimelineCellData(article: article, showFeedName: showFeedNames, feedName: article.feed?.nameForDisplay, byline: article.byline(), iconImage: iconImage, showIcon: showIcons)
+		var imageURL: String?
+		var image: NSImage?
+		if showsImagesInTimeline {
+			imageURL = TimelineImageFinder.shared.imageURL(for: article)
+			image = imageURL.flatMap { TimelineImageDownloader.shared.image(for: $0) }
+		}
+		cell.cellData = TimelineCellData(article: article, showFeedName: showFeedNames, feedName: article.feed?.nameForDisplay, byline: article.byline(), iconImage: iconImage, showIcon: showIcons, imageURL: imageURL, image: image)
 	}
 
 	private func iconFor(_ article: Article) -> IconImage? {
@@ -1312,8 +1432,16 @@ private extension TimelineViewController {
 		fetchRequestQueue.cancelAllRequests()
 	}
 
+	/// Keeps the newest articles, as many as View > Articles per View says, then sorts them as chosen.
 	func replaceArticles(with unsortedArticles: Set<Article>) {
-		articles = Array(unsortedArticles).sorted(by: sortParameters)
+		let limit = AppDefaults.shared.articlesPerView
+		articlesWereLimited = limit > 0 && unsortedArticles.count > limit
+		guard articlesWereLimited else {
+			articles = Array(unsortedArticles).sorted(by: sortParameters)
+			return
+		}
+		let newest = unsortedArticles.sorted { $0.logicalDatePublished > $1.logicalDatePublished }.prefix(limit)
+		articles = Array(newest).sorted(by: sortParameters)
 	}
 
 	func fetchUnsortedArticlesSync(for representedObjects: [Any]) -> Set<Article> {
@@ -1407,7 +1535,7 @@ private extension TimelineViewController {
 				continue
 			}
 			if readFilterEnabledTable[sidebarItemID] == nil {
-				readFilterEnabledTable[sidebarItemID] = true
+				readFilterEnabledTable[sidebarItemID] = !AppDefaults.shared.foldersShowReadArticles
 			}
 		}
 	}

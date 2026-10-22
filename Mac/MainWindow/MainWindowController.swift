@@ -459,6 +459,55 @@ final class MainWindowController: NSWindowController, NSUserInterfaceValidations
 		}
 	}
 
+	#if DEBUG
+	/// For screenshots without clicking: selects a sidebar item.
+	func selectForTesting(_ sidebarItem: SidebarItem) {
+		sidebarViewController?.selectFeed(sidebarItem)
+	}
+	#endif
+
+	/// Exports what the timeline shows as a magazine PDF, whatever the layout.
+	@IBAction func exportMagazinePDF(_ sender: Any?) {
+		guard let window, let timelineViewController = currentTimelineViewController, !timelineViewController.articles.isEmpty else {
+			NSSound.beep()
+			return
+		}
+		let title = timelineViewController.magazineTitle
+		let panel = NSSavePanel()
+		panel.allowedContentTypes = [.pdf]
+		panel.nameFieldStringValue = "\(title) \(Date().formatted(.iso8601.year().month().day())).pdf"
+		panel.beginSheetModal(for: window) { response in
+			guard response == .OK, let url = panel.url else {
+				return
+			}
+			let exporter = MagazinePDFExporter(articles: timelineViewController.articles, title: title)
+			let progress = MagazinePDFExportProgress()
+			progress.pageCount = exporter.pageCount
+			let task = Task { @MainActor in
+				defer {
+					progress.close()
+				}
+				do {
+					try await exporter.export(to: url) { page in
+						progress.page = page
+					}
+					NSWorkspace.shared.open(url)
+				} catch is CancellationError {
+					// Nothing was written
+				} catch {
+					NSApplication.shared.presentError(error)
+				}
+			}
+			progress.cancel = {
+				task.cancel()
+			}
+			// The save panel’s sheet is still closing; show the progress sheet right after.
+			DispatchQueue.main.async {
+				progress.show(on: window)
+			}
+		}
+	}
+
 	@IBAction func markAllAsRead(_ sender: Any?) {
 		currentTimelineViewController?.markAllAsRead()
 	}
@@ -1147,6 +1196,10 @@ private extension MainWindowController {
 			let columnLayoutSplitViewControllers = makeColumnLayoutSplitViewControllers(sidebar: sidebarViewController, timeline: timelineContainerViewController, detail: detailViewController)
 			newSplitViewController = columnLayoutSplitViewControllers.split
 			contentSplitViewController = columnLayoutSplitViewControllers.content
+		case .magazine:
+			// The article view isn’t shown, but the window still talks to it, so its view must be loaded.
+			_ = detailViewController.view
+			newSplitViewController = makeMagazineSplitViewController(sidebar: sidebarViewController, timeline: timelineContainerViewController)
 		}
 		splitViewController = newSplitViewController
 		timelineLayout = layout
@@ -1266,6 +1319,25 @@ private extension MainWindowController {
 		return (splitViewController, contentSplitViewController)
 	}
 
+	/// Sidebar and the magazine. The article view isn’t shown: clicking an article opens it in the browser.
+	func makeMagazineSplitViewController(sidebar: SidebarViewController, timeline: TimelineContainerViewController) -> NSSplitViewController {
+		let splitViewController = makeEmptySplitViewController(isVertical: true)
+
+		let sidebarItem = NSSplitViewItem(sidebarWithViewController: sidebar)
+		sidebarItem.holdingPriority = NSLayoutConstraint.Priority(Self.sidebarHoldingPriority)
+
+		let timelineItem = NSSplitViewItem(viewController: timeline)
+		if #available(macOS 26.0, *) {
+			timelineItem.automaticallyAdjustsSafeAreaInsets = true
+		} else {
+			timelineItem.titlebarSeparatorStyle = .line
+		}
+
+		splitViewController.splitViewItems = [sidebarItem, timelineItem]
+		sidebar.splitViewItem = sidebarItem
+		return splitViewController
+	}
+
 	func makeEmptySplitViewController(isVertical: Bool, splitView: NSSplitView = NSSplitView()) -> NSSplitViewController {
 		let splitViewController = NSSplitViewController()
 		splitViewController.splitView = splitView
@@ -1354,13 +1426,13 @@ private extension MainWindowController {
 			let timelineWidth = window.frame.width - (visibleSidebarWidth + detailWidth + (dividerThickness * dividerCount))
 			rememberedStandardLayoutWidths = [sidebarWidth, Int(floor(timelineWidth)), Int(floor(detailWidth))]
 
-		case .column:
+		case .column, .magazine:
 			if rememberedStandardLayoutWidths.count == 3 {
 				rememberedStandardLayoutWidths[0] = sidebarWidth
 			} else {
 				rememberedStandardLayoutWidths = [sidebarWidth, 0, 0]
 			}
-			if let timelineView = contentSplitViewController?.splitView.arrangedSubviews.first {
+			if timelineLayout == .column, let timelineView = contentSplitViewController?.splitView.arrangedSubviews.first {
 				rememberedColumnLayoutTimelineHeight = Int(floor(timelineView.frame.height))
 			}
 		}
@@ -1388,6 +1460,11 @@ private extension MainWindowController {
 			if timelineWidth > 0 {
 				let secondDividerPosition = sidebarWidth > 0 ? sidebarWidth + splitView.dividerThickness + timelineWidth : timelineWidth
 				splitView.setPosition(secondDividerPosition, ofDividerAt: 1)
+			}
+
+		case .magazine:
+			if widths.count == 3 && widths[0] > 0 {
+				splitView.setPosition(CGFloat(widths[0]), ofDividerAt: 0)
 			}
 
 		case .column:

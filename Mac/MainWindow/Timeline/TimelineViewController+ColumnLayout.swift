@@ -19,7 +19,7 @@ extension TimelineViewController {
 
 	func configureTableView(for layout: TimelineLayout) {
 		switch layout {
-		case .standard:
+		case .standard, .magazine: // The magazine hides the table but keeps it current
 			configureTableViewForStandardLayout()
 		case .column:
 			configureTableViewForColumnLayout()

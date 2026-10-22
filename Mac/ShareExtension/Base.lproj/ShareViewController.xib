@@ -59,7 +59,7 @@ Gw
                         </imageView>
                         <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="GhJ-6e-cD4">
                             <rect key="frame" x="30" y="3" width="98" height="19"/>
-                            <textFieldCell key="cell" lineBreakMode="clipping" title="NetNewsWire" id="5Ed-E1-Gf1">
+                            <textFieldCell key="cell" lineBreakMode="clipping" title="RSS Feed Magazine" id="5Ed-E1-Gf1">
                                 <font key="font" textStyle="title3" name=".SFNS-Regular"/>
                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
                                 <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>

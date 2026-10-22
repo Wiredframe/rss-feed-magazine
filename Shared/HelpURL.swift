@@ -10,12 +10,12 @@ import Foundation
 
 enum HelpURL: String {
 
-	case helpHome = "https://netnewswire.com/help/"
-	case website = "https://netnewswire.com/"
-	case releaseNotes = "https://github.com/Ranchero-Software/NetNewsWire/releases/"
+	case helpHome = "https://github.com/Wiredframe/rss-feed-magazine#readme"
+	case website = "https://www.wiredframe.de/blog/netnewsfeed/"
+	case releaseNotes = "https://github.com/Wiredframe/rss-feed-magazine/releases/"
 	case howToSupportNetNewsWire = "https://github.com/Ranchero-Software/NetNewsWire/blob/main/Technotes/HowToSupportNetNewsWire.markdown"
-	case githubRepo = "https://github.com/Ranchero-Software/NetNewsWire"
-	case bugTracker = "https://github.com/Ranchero-Software/NetNewsWire/issues"
+	case githubRepo = "https://github.com/Wiredframe/rss-feed-magazine"
+	case bugTracker = "https://github.com/Wiredframe/rss-feed-magazine/issues"
 	case discourse = "https://discourse.netnewswire.com/"
 	case technotes = "https://github.com/Ranchero-Software/NetNewsWire/tree/main/Technotes"
 	case privacyPolicy = "https://netnewswire.com/privacypolicy.html"

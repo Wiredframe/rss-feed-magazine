@@ -167,7 +167,7 @@ extension SidebarViewController {
 		DispatchQueue.main.async {
 			let alert = NSAlert()
 			alert.messageText = NSLocalizedString("Notifications are not enabled", comment: "Notifications are not enabled.")
-			alert.informativeText = NSLocalizedString("You can enable NetNewsWire notifications in System Preferences.", comment: "Notifications are not enabled.")
+			alert.informativeText = NSLocalizedString("You can enable RSS Feed Magazine notifications in System Preferences.", comment: "Notifications are not enabled.")
 			alert.addButton(withTitle: NSLocalizedString("Open System Preferences", comment: "Open System Preferences"))
 			alert.addButton(withTitle: NSLocalizedString("Dismiss", comment: "Dismiss"))
 			let userChoice = alert.runModal()

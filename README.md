@@ -1,95 +1,65 @@
-<img src=Technotes/Images/icon_1024.png height=128 width=128 style="display: block; margin: auto;"> 
+<img src=Screenshots/icon.png height=128 width=128 style="display: block; margin: auto;">
 
-# NetNewsWire
+# RSS Feed Magazine
 
-NetNewsWire is a free and open-source feed reader for macOS and iOS.
+RSS Feed Magazine is a personal fork of [NetNewsWire](https://github.com/Ranchero-Software/NetNewsWire) for the Mac that shows article images, in the timeline and in a new magazine layout.
 
-It supports [RSS](https://cyber.harvard.edu/rss/rss.html), [Atom](https://datatracker.ietf.org/doc/html/rfc4287), [JSON Feed](https://jsonfeed.org/), and [RSS-in-JSON](https://github.com/scripting/Scripting-News/blob/master/rss-in-json/README.md) formats.
+![The magazine layout](Screenshots/magazine.jpg)
 
-More info: [https://netnewswire.com/](https://netnewswire.com/)
+It’s a personal fork, not a replacement: NetNewsWire is a wonderful feed reader, and its makers plan their own take on images ([#1551](https://github.com/Ranchero-Software/NetNewsWire/issues/1551)). This fork goes its own way in the meantime. The story behind it (in German): [Mein NetNewsWire-Fork liest sich jetzt wie ein Magazin](https://www.wiredframe.de/blog/netnewsfeed/).
 
-You can [report bugs and make feature requests](https://github.com/Ranchero-Software/NetNewsWire/issues) here on GitHub. You can also [read change notes](https://github.com/Ranchero-Software/NetNewsWire/releases/) for current and previous releases.
+## What’s different
 
-Here’s [How to Support NetNewsWire](Technotes/HowToSupportNetNewsWire.markdown). Spoiler: don’t send money. :)
+**Magazine layout** (View > Use Magazine Layout, on by default). Instead of a timeline and an article view, one surface that scrolls sideways and reads like a printed magazine: a fixed grid, templates that alternate (front page, newspaper page, photo page, black page, briefs), headlines in New York, body text in columns with justification, hyphenation, drop caps, and a shared baseline grid. Each folder is a section with its own color, which travels with its articles into All Unread and Today. Clicking an article marks it read and opens it in the browser.
 
-(NetNewsWire’s Help menu has these links, so you don’t have to remember to come back to this page.)
+![A photo page](Screenshots/magazine-photo.jpg)
 
-#### Community
+![A newspaper page](Screenshots/magazine-newspaper.jpg)
 
-[Join the forum](https://discourse.netnewswire.com/) to talk with other NetNewsWire users — and to help out, if you’d like to, by testing, coding, writing, providing feedback, or just helping us think things through. Everybody is welcome and encouraged to join.
+![A black page](Screenshots/magazine-black.jpg)
 
-Every community member is expected to abide by the [code of conduct](CONTRIBUTING.md#code-of-conduct) which is included in the [Contributing](CONTRIBUTING.md) page.
+**Images in the timeline** (View > Show Images in Timeline). Each article gets its image below the text, 16:9, with Mail-style separators between rows. Images are scaled to 960 pixels and cached with a 64 MB memory and 200 MB disk limit.
 
-#### Pull Requests
+![The timeline with images](Screenshots/timeline.jpg)
 
-See the [Contributing](CONTRIBUTING.md) page for our process. They key thing is to ask before doing a PR (before even starting work). The Contributing page goes into more detail as to why it’s important to ask first.
+**Images from where feeds really put them.** Many feeds carry their article image only in Media RSS (`media:content`, `media:thumbnail`), as an image enclosure, or, like BR24, in the ARD’s metaplus module. The parser reads all of them and keeps the widest image.
 
-#### Building
+**PDF export** (File > Export Magazine as PDF…). The magazine as an A4 PDF: one block per page, running head, page numbers, every article linked. Text stays text.
 
-You can build and test NetNewsWire without a paid developer account.
+![Three pages of the PDF export](Screenshots/pdf.jpg)
 
-```bash
-git clone https://github.com/Ranchero-Software/NetNewsWire.git
-```
+**Smaller things.** Folders show read articles too (View > Show Read Articles in Folders). Views show the newest 100 articles (View > Articles per View). Read articles in the magazine can fade (View > Fade Read Articles in Magazine, off by default).
 
-You can locally override the Xcode settings for code signing
-by creating a `DeveloperSettings.xcconfig` file locally at the appropriate path.
-This allows for a pristine project with code signing set up with the appropriate
-developer ID and certificates, and for developer to be able to have local settings
-without needing to check in anything into source control.
+## What’s not there
 
-You can do this in one of two ways: using the included `setup.sh` script or by creating the folder structure and file manually.
+RSS Feed Magazine has its own name, icon, user agent, Developer ID signature, and bundle ID (`de.wiredframe.RSSFeedMagazine`), so it isn’t mistaken for NetNewsWire and runs next to it with separate data. That means:
 
-##### Using `setup.sh`
+- No iCloud sync, no Feedly, no Inoreader, and no Reader view: they need Ranchero’s entitlements or API keys. On My Mac, Feedbin, FreshRSS and the other services work.
+- No Sparkle updates and no crash reports to netnewswire.com. Updates come through Homebrew.
+- Mac only. The iOS app is untouched.
 
-- Open Terminal and `cd` into the NetNewsWire directory. 
-- Run this command to ensure you have execution rights for the script: `chmod +x setup.sh`
-- Execute the script with the following command: `./setup.sh` and complete the answers.
-
-##### Manually 
-
-Make a directory `SharedXcodeSettings` next to where you have this repository.
-
-The directory structure is:
+## Install
 
 ```
-directory/
-  SharedXcodeSettings/
-    DeveloperSettings.xcconfig
-  NetNewsWire/
-    NetNewsWire.xcodeproj
-```
-Example:
-
-If your NetNewsWire Xcode project file is at:
-`/Users/name/projects/NetNewsWire/NetNewsWire.xcodeproj`
-
-Create your `DeveloperSettings.xcconfig` file at
-`/Users/name/projects/SharedXcodeSettings/DeveloperSettings.xcconfig`
-
-Then create a plain text file in it: `SharedXcodeSettings/DeveloperSettings.xcconfig` and
-give it the contents:
-
-```
-CODE_SIGN_IDENTITY = Mac Developer
-DEVELOPMENT_TEAM = <Your Team ID>
-CODE_SIGN_STYLE = Automatic
-ORGANIZATION_IDENTIFIER = <Your Domain Name Reversed>
-DEVELOPER_ENTITLEMENTS = -dev
-PROVISIONING_PROFILE_SPECIFIER =
+brew install --cask wiredframe/tap/rss-feed-magazine
 ```
 
-Set `DEVELOPMENT_TEAM` to your Apple supplied development team.  You can use Keychain
-Access to [find your development team ID](/Technotes/FindingYourDevelopmentTeamID.md).
-Set `ORGANIZATION_IDENTIFIER` to a reversed domain name that you control or have made up.
-Note that `PROVISIONING_PROFILE_SPECIFIER` should not have a value associated with it.
+Or download the zip from [Releases](https://github.com/Wiredframe/rss-feed-magazine/releases). Apple Silicon, macOS 15 or later. The app is signed but not notarized: the first time, open it with right-click > Open.
 
-You can now open the `NetNewsWire.xcodeproj` in Xcode.
+To move your subscriptions over, use File > Export Subscriptions… in NetNewsWire and File > Import Subscriptions… in RSS Feed Magazine.
 
-Now you should be able to build without code signing errors and without modifying
-the NetNewsWire Xcode project.  This is a special build of NetNewsWire with some
-functionality disabled.  This is because we have API keys that can't be stored in the
-repository or shared between developers.  Certain account types, like iCloud and Feedly, aren't
-enabled and the Reader View isn't enabled because of this.
+## Build
 
-If you have any problems, we will help you out in the forum ([see above](README.md#Community)).
+```
+./buildscripts/rss-feed-magazine.sh            # Release build into build/
+./buildscripts/rss-feed-magazine.sh --install  # and copy to ~/Applications
+./buildscripts/rss-feed-magazine.sh --zip      # and zip for a release
+```
+
+Signing is set in `xcconfig/common/NetNewsWire_codesigning_common.xcconfig`; change the team for your own builds.
+
+## Credits
+
+NetNewsWire is by Brent Simmons and contributors, MIT licensed; so is this fork. The changes were written with the help of an LLM (Claude), as every commit says. Screenshots show public-domain NASA feeds.
+
+The original README is in [README-NetNewsWire.md](README-NetNewsWire.md).

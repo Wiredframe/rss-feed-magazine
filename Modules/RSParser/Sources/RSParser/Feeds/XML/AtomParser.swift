@@ -121,6 +121,13 @@ private final class AtomDelegate: XMLSAXParserDelegate {
 			namespaceElementDepth += 1
 			return
 		}
+		if parsingArticle && namespace.isMediaRSS {
+			// Media RSS: take images, look inside media:group, skip the rest.
+			if let item = currentArticle {
+				MediaRSS.addImage(localName: localName, attributes: attributes.dictionary(), to: item) { self.resolvedURLString($0) ?? $0 }
+			}
+			return
+		}
 		if parsingArticle && namespace.prefix != nil {
 			// Skip this namespaced element and its entire subtree, so a nested
 			// unprefixed element (e.g. Shopify's <title>Default Title</title>) can't be
@@ -212,6 +219,10 @@ private final class AtomDelegate: XMLSAXParserDelegate {
 			if !baseURLStack.isEmpty {
 				baseURLStack.removeLast()
 			}
+		}
+
+		if parsingArticle && namespace.isMediaRSS && namespaceElementDepth == 0 {
+			return
 		}
 
 		if localName.equals("feed") {
@@ -317,6 +328,9 @@ private final class AtomDelegate: XMLSAXParserDelegate {
 			let sizeInBytes = length > 0 ? length : nil
 			if let attachment = ParsedAttachment(url: resolved, mimeType: attributes["type"], title: attributes["title"], sizeInBytes: sizeInBytes, durationInSeconds: nil) {
 				article.attachments.insert(attachment)
+			}
+			if attributes["type"]?.hasPrefix("image/") == true {
+				article.addImageCandidate(url: resolved, width: nil, isThumbnail: false, isEnclosure: true)
 			}
 			return
 		}

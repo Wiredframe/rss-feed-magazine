@@ -22,10 +22,11 @@ import RSCore
 	let unreadIndicatorRect: NSRect
 	let starRect: NSRect
 	let iconImageRect: NSRect
+	let imageRect: NSRect
 	let separatorRect: NSRect
 	let paddingBottom: CGFloat
 
-	init(width: CGFloat, height: CGFloat, feedNameRect: NSRect, dateRect: NSRect, titleRect: NSRect, numberOfLinesForTitle: Int, summaryRect: NSRect, textRect: NSRect, unreadIndicatorRect: NSRect, starRect: NSRect, iconImageRect: NSRect, separatorRect: NSRect, paddingBottom: CGFloat) {
+	init(width: CGFloat, height: CGFloat, feedNameRect: NSRect, dateRect: NSRect, titleRect: NSRect, numberOfLinesForTitle: Int, summaryRect: NSRect, textRect: NSRect, unreadIndicatorRect: NSRect, starRect: NSRect, iconImageRect: NSRect, imageRect: NSRect, separatorRect: NSRect, paddingBottom: CGFloat) {
 
 		self.width = width
 		self.feedNameRect = feedNameRect
@@ -37,13 +38,14 @@ import RSCore
 		self.unreadIndicatorRect = unreadIndicatorRect
 		self.starRect = starRect
 		self.iconImageRect = iconImageRect
+		self.imageRect = imageRect
 		self.separatorRect = separatorRect
 		self.paddingBottom = paddingBottom
 
 		if height > 0.1 {
 			self.height = height
 		} else {
-			self.height = [feedNameRect, dateRect, titleRect, summaryRect, textRect, unreadIndicatorRect, iconImageRect].maxY() + paddingBottom
+			self.height = [feedNameRect, dateRect, titleRect, summaryRect, textRect, unreadIndicatorRect, iconImageRect, imageRect].maxY() + paddingBottom
 		}
 	}
 
@@ -52,7 +54,7 @@ import RSCore
 		// If height == 0.0, then height is calculated.
 
 		let showIcon = cellData.showIcon
-		var textBoxRect = TimelineCellLayout.rectForTextBox(appearance, cellData, showIcon, width)
+		var textBoxRect = TimelineCellLayout.rectForTextBox(appearance, showIcon, width)
 
 		let (titleRect, numberOfLinesForTitle) = TimelineCellLayout.rectForTitle(textBoxRect, appearance, cellData)
 		let summaryRect = numberOfLinesForTitle > 0 ? TimelineCellLayout.rectForSummary(textBoxRect, titleRect, numberOfLinesForTitle, appearance, cellData) : NSRect.zero
@@ -71,13 +73,14 @@ import RSCore
 
 		textBoxRect.size.height = ceil([titleRect, summaryRect, textRect, dateRect, feedNameRect].maxY() - textBoxRect.origin.y)
 		let iconImageRect = TimelineCellLayout.rectForIcon(cellData, appearance, showIcon, textBoxRect, width, height)
+		let imageRect = TimelineCellLayout.rectForImage(cellData, appearance, textBoxRect, height)
 		let unreadIndicatorRect = TimelineCellLayout.rectForUnreadIndicator(appearance, textBoxRect)
 		let starRect = TimelineCellLayout.rectForStar(appearance, unreadIndicatorRect)
 		let separatorRect = TimelineCellLayout.rectForSeparator(cellData, appearance, showIcon ? iconImageRect : titleRect, width, height)
 
 		let paddingBottom = appearance.cellPadding.bottom
 
-		self.init(width: width, height: height, feedNameRect: feedNameRect, dateRect: dateRect, titleRect: titleRect, numberOfLinesForTitle: numberOfLinesForTitle, summaryRect: summaryRect, textRect: textRect, unreadIndicatorRect: unreadIndicatorRect, starRect: starRect, iconImageRect: iconImageRect, separatorRect: separatorRect, paddingBottom: paddingBottom)
+		self.init(width: width, height: height, feedNameRect: feedNameRect, dateRect: dateRect, titleRect: titleRect, numberOfLinesForTitle: numberOfLinesForTitle, summaryRect: summaryRect, textRect: textRect, unreadIndicatorRect: unreadIndicatorRect, starRect: starRect, iconImageRect: iconImageRect, imageRect: imageRect, separatorRect: separatorRect, paddingBottom: paddingBottom)
 	}
 
 	static func height(for width: CGFloat, cellData: TimelineCellData, appearance: TimelineCellAppearance) -> CGFloat {
@@ -85,13 +88,19 @@ import RSCore
 		let layout = TimelineCellLayout(width: width, height: 0.0, cellData: cellData, appearance: appearance, hasIcon: true)
 		return layout.height
 	}
+
+	/// Extra row height for a cell that shows an article image, given the cell’s width.
+	static func additionalHeightForImage(cellWidth: CGFloat, appearance: TimelineCellAppearance) -> CGFloat {
+		let textBoxRect = rectForTextBox(appearance, appearance.showIcon, cellWidth)
+		return appearance.imageMarginTop + imageHeight(textBoxRect.width, appearance)
+	}
 }
 
 // MARK: - Calculate Rects
 
 @MainActor private extension TimelineCellLayout {
 
-	static func rectForTextBox(_ appearance: TimelineCellAppearance, _ cellData: TimelineCellData, _ showIcon: Bool, _ width: CGFloat) -> NSRect {
+	static func rectForTextBox(_ appearance: TimelineCellAppearance, _ showIcon: Bool, _ width: CGFloat) -> NSRect {
 
 		// Returned height is a placeholder. Not needed when this is calculated.
 
@@ -217,6 +226,27 @@ import RSCore
 		r.origin.y = textBoxRect.origin.y + appearance.iconAdjustmentTop
 
 		return r
+	}
+
+	/// Below the text, as wide as the text. When the row height is given, the image never extends past the bottom padding.
+	static func rectForImage(_ cellData: TimelineCellData, _ appearance: TimelineCellAppearance, _ textBoxRect: NSRect, _ height: CGFloat) -> NSRect {
+		guard cellData.imageURL != nil else {
+			return NSRect.zero
+		}
+
+		var r = NSRect.zero
+		r.origin.x = textBoxRect.minX
+		r.origin.y = textBoxRect.maxY + appearance.imageMarginTop
+		r.size.width = textBoxRect.width
+		r.size.height = imageHeight(textBoxRect.width, appearance)
+		if height > 0.1 {
+			r.size.height = max(0, min(r.size.height, height - appearance.cellPadding.bottom - r.origin.y))
+		}
+		return r
+	}
+
+	static func imageHeight(_ width: CGFloat, _ appearance: TimelineCellAppearance) -> CGFloat {
+		return min(floor(width * appearance.imageAspectRatio), appearance.imageMaxHeight)
 	}
 
 	static func rectForSeparator(_ cellData: TimelineCellData, _ appearance: TimelineCellAppearance, _ alignmentRect: NSRect, _ width: CGFloat, _ height: CGFloat) -> NSRect {

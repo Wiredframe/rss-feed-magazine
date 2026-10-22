@@ -28,11 +28,9 @@ final class PreferencesWindowController: NSWindowController, NSToolbarDelegate {
 		PreferencesToolbarItemSpec(identifier: NSToolbarItem.Identifier("Accounts"),
 								   name: NSLocalizedString("Accounts", comment: "Preferences"),
 								   image: Assets.Images.preferencesToolbarAccounts,
-								   makeViewController: { AccountsPreferencesViewController() }),
-		PreferencesToolbarItemSpec(identifier: NSToolbarItem.Identifier("Advanced"),
-								   name: NSLocalizedString("Advanced", comment: "Preferences"),
-								   image: Assets.Images.preferencesToolbarAdvanced,
-								   makeViewController: { AdvancedPreferencesViewController() })
+								   makeViewController: { AccountsPreferencesViewController() })
+		// RSS Feed Magazine has no Advanced pane: it only held Sparkle and crash log settings,
+		// and both are off in this fork.
 	]
 
 	convenience init() {

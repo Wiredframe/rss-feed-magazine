@@ -11,7 +11,6 @@
 	  <outline text="Julia Evans" title="Julia Evans" type="rss" version="RSS" htmlUrl="https://jvns.ca/" xmlUrl="https://jvns.ca/atom.xml"/>
 	  <outline text="Manton Reece" title="Manton Reece" type="rss" version="RSS" htmlUrl="https://manton.org/" xmlUrl="https://www.manton.org/feed.json"/>
 	  <outline text="Michael Tsai" title="Michael Tsai" type="rss" version="RSS" htmlUrl="https://mjtsai.com/blog/" xmlUrl="https://mjtsai.com/blog/feed/"/>
-	  <outline text="NetNewsWire Blog" title="NetNewsWire Blog" type="rss" version="RSS" htmlUrl="https://netnewswire.blog/" xmlUrl="https://netnewswire.blog/feed.json"/>
 	  <outline text="Scripting News" title="Scripting News" type="rss" version="RSS" htmlUrl="http://scripting.com/" xmlUrl="http://scripting.com/rss.xml"/>
 	  <outline text="Six Colors" title="Six Colors" type="rss" version="RSS" htmlUrl="https://sixcolors.com/" xmlUrl="https://feedpress.me/sixcolors?type=xml"/>
   </body>

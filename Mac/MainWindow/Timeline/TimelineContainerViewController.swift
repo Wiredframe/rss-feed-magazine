@@ -7,6 +7,7 @@
 //
 
 import AppKit
+import SwiftUI
 import Account
 import Articles
 
@@ -36,14 +37,20 @@ final class TimelineContainerViewController: NSViewController {
 
 	var currentTimelineViewController: TimelineViewController? {
 		didSet {
-			let view = currentTimelineViewController?.view
-			if containerView.contentView === view {
-				return
-			}
-			containerView.contentView = view
-			view?.window?.recalculateKeyViewLoop()
+			updateContentView()
 		}
 	}
+
+	// In magazine layout the timeline view controllers keep fetching, filtering, and searching,
+	// and the magazine shows the current one’s articles in place of the table.
+	private lazy var magazineModel: MagazineModel = {
+		let model = MagazineModel()
+		model.openArticle = { [weak self] article in
+			self?.currentTimelineViewController?.openArticleFromMagazine(article)
+		}
+		return model
+	}()
+	private lazy var magazineView = NSHostingView(rootView: MagazineView(model: magazineModel))
 
 	var windowState: TimelineWindowState? {
 		currentTimelineViewController?.windowState
@@ -117,6 +124,9 @@ final class TimelineContainerViewController: NSViewController {
 
 	private func userDefaultsDidChange() {
 		layout = AppDefaults.shared.timelineLayout
+		if magazineModel.fadesReadArticles != AppDefaults.shared.magazineFadesReadArticles {
+			magazineModel.fadesReadArticles = AppDefaults.shared.magazineFadesReadArticles
+		}
 	}
 
 	// MARK: - API
@@ -215,6 +225,12 @@ extension TimelineContainerViewController: TimelineDelegate {
 	func timelineRequestedSortChange(_: TimelineViewController, parameters: ArticleSortParameters) {
 		sortParameters = parameters
 	}
+
+	func timelineArticlesDidChange(_ timelineViewController: TimelineViewController) {
+		if timelineViewController === currentTimelineViewController {
+			updateMagazine()
+		}
+	}
 }
 
 private extension TimelineContainerViewController {
@@ -264,6 +280,27 @@ private extension TimelineContainerViewController {
 		regularTimelineViewController.layout = layout
 		searchTimelineViewController.layout = layout
 		updateHeaderVisibility()
+		updateContentView()
+	}
+
+	func updateContentView() {
+		let timelineView = currentTimelineViewController?.view // Loads the table even when the magazine shows instead
+		let view = layout == .magazine ? magazineView : timelineView
+		if layout == .magazine {
+			updateMagazine()
+		}
+		if containerView.contentView === view {
+			return
+		}
+		containerView.contentView = view
+		view?.window?.recalculateKeyViewLoop()
+	}
+
+	func updateMagazine() {
+		guard layout == .magazine, let currentTimelineViewController else {
+			return
+		}
+		magazineModel.update(articles: currentTimelineViewController.articles, title: currentTimelineViewController.magazineTitle)
 	}
 
 	func updateHeaderVisibility() {
@@ -276,7 +313,7 @@ private extension TimelineContainerViewController {
 	}
 
 	func updateReadFilterButton() {
-		guard layout == .standard else {
+		guard layout != .column else {
 			readFilteredButton.isHidden = true
 			return
 		}

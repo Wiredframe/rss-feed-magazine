@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NetNewsFeed Magazin</title>
+<style>
+:root {
+	--desk: #d4d3cf;
+	--paper: #fdfdfb;
+	--ink: #000;
+	--body: #2a2a28;
+	--meta: #7a7873;
+	--rule: #c9c7c1;
+	--accent: #c8102e;
+	--dark-paper: #000;
+	--dark-ink: #f4f3ef;
+	--ph: 800px; /* Page height, set by script */
+	--display: "Didot", "Bodoni 72", "Bodoni Moda", serif;
+	--serif: "Iowan Old Style", "Charter", Georgia, serif;
+	--sans: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+	color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+	:root {
+		--desk: #2b2b2a;
+		--paper: #1b1b1a;
+		--ink: #f4f3ef;
+		--body: #d9d8d3;
+		--meta: #8f8d87;
+		--rule: #3d3c39;
+		--dark-paper: #000;
+		color-scheme: dark;
+	}
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--desk); overflow: hidden; }
+body { font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+
+/* Section switcher stands in for the sidebar in the app. */
+.sections { height: 44px; display: flex; gap: 4px; align-items: center; padding: 0 20px; }
+.sections button { font: 500 13px var(--sans); color: var(--body); background: none; border: 0; padding: 6px 10px; border-radius: 6px; cursor: pointer; }
+.sections button[aria-pressed="true"] { background: var(--paper); color: var(--ink); }
+.sections button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.issue { height: calc(100% - 44px); display: flex; gap: 48px; align-items: center; overflow-x: auto; overflow-y: hidden; padding: 0 48px 16px; scroll-snap-type: x proximity; scrollbar-width: thin; }
+.spread { flex: none; display: flex; height: var(--ph); scroll-snap-align: center; box-shadow: 0 1px 2px rgba(0,0,0,.12), 0 12px 32px rgba(0,0,0,.12); }
+.page {
+	position: relative; width: calc(var(--ph) * .74); height: 100%;
+	background: var(--paper); color: var(--ink);
+	display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(12, 1fr);
+	column-gap: calc(var(--ph) * .02); row-gap: calc(var(--ph) * .012);
+	padding: calc(var(--ph) * .05) calc(var(--ph) * .05) calc(var(--ph) * .065);
+}
+.page.left { padding-right: calc(var(--ph) * .04); }
+.page.right { padding-left: calc(var(--ph) * .04); }
+/* The fold */
+.page.left::after { content: ""; position: absolute; inset: 0 0 0 auto; width: 28px; background: linear-gradient(to left, rgba(0,0,0,.07), transparent); pointer-events: none; }
+.page.right::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 28px; background: linear-gradient(to right, rgba(0,0,0,.07), transparent); pointer-events: none; }
+.page.dark { background: var(--dark-paper); color: var(--dark-ink); --ink: var(--dark-ink); --body: #cfcdc7; --meta: #8a8882; --rule: #3a3936; }
+
+.folio { position: absolute; bottom: calc(var(--ph) * .025); left: calc(var(--ph) * .05); right: calc(var(--ph) * .05); display: flex; justify-content: space-between; font: 500 calc(var(--ph) * .012) var(--sans); color: var(--meta); }
+.folio b { color: var(--accent); font-weight: 600; }
+
+/* Masthead */
+.masthead { display: flex; flex-direction: column; justify-content: flex-end; border-bottom: 3px solid var(--ink); padding-bottom: calc(var(--ph) * .008); }
+.masthead h1 { margin: 0; font: 700 calc(var(--ph) * .1) / .9 var(--display); letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: clip; }
+.masthead .dateline { display: flex; justify-content: space-between; margin-top: calc(var(--ph) * .012); padding-top: calc(var(--ph) * .006); border-top: 1px solid var(--ink); font: 500 calc(var(--ph) * .0135) var(--sans); color: var(--body); }
+
+/* Modules */
+.module { display: flex; flex-direction: column; min-height: 0; min-width: 0; cursor: pointer; color: inherit; text-decoration: none; }
+.module:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.module figure { margin: 0 0 calc(var(--ph) * .012); flex: none; overflow: hidden; background: color-mix(in srgb, var(--ink) 6%, transparent); }
+.module img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.kicker { flex: none; font: 600 calc(var(--ph) * .0125) var(--sans); color: var(--accent); margin-bottom: calc(var(--ph) * .006); display: flex; justify-content: space-between; gap: 8px; }
+.kicker time { color: var(--meta); font-weight: 500; }
+.headline { flex: none; margin: 0 0 calc(var(--ph) * .01); color: var(--ink); display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; text-wrap: balance; }
+.text { flex: 1 1 0; min-height: 0; overflow: hidden; font: calc(var(--ph) * .0158) / 1.42 var(--serif); color: var(--body); column-fill: auto; column-gap: calc(var(--ph) * .02); hyphens: auto; text-align: justify; }
+.text p { margin: 0; }
+.read .headline { color: var(--meta); }
+.read figure { opacity: .55; }
+
+.dropcap p::first-letter { float: left; font: 700 calc(var(--ph) * .0158 * 1.42 * 3) / .8 var(--display); padding: calc(var(--ph) * .004) calc(var(--ph) * .008) 0 0; color: var(--ink); }
+
+/* Styles per slot */
+.hero .headline { font: 700 calc(var(--ph) * .052) / 1.02 var(--display); -webkit-line-clamp: 3; letter-spacing: -.005em; }
+.story .headline, .story-dark .headline { font: 700 calc(var(--ph) * .068) / 1 var(--display); -webkit-line-clamp: 5; margin-bottom: calc(var(--ph) * .025); }
+.story-dark { justify-content: flex-end; }
+.lead .headline { font: 700 calc(var(--ph) * .044) / 1.04 var(--display); -webkit-line-clamp: 3; }
+.feature .headline { font: 700 calc(var(--ph) * .025) / 1.12 var(--serif); -webkit-line-clamp: 3; }
+.side { flex-direction: row; gap: calc(var(--ph) * .02); }
+.side figure { width: 50%; height: auto; margin: 0; }
+.side .body { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.side .headline { font: 700 calc(var(--ph) * .027) / 1.1 var(--serif); -webkit-line-clamp: 4; }
+.fullbleed { margin: calc(var(--ph) * -.05) calc(var(--ph) * -.04) calc(var(--ph) * -.065) calc(var(--ph) * -.05); position: relative; }
+.fullbleed figure { height: 100%; margin: 0; }
+.fullbleed figcaption { position: absolute; left: calc(var(--ph) * .05); bottom: calc(var(--ph) * .03); font: 500 calc(var(--ph) * .013) var(--sans); color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
+
+.briefs { display: grid; column-gap: calc(var(--ph) * .02); border-top: 2px solid var(--ink); padding-top: calc(var(--ph) * .012); min-height: 0; }
+.briefs > h2 { grid-column: 1 / -1; margin: 0 0 calc(var(--ph) * .006); font: 700 calc(var(--ph) * .02) var(--display); }
+.brief { border-top: 1px solid var(--rule); padding-top: calc(var(--ph) * .01); }
+.brief .headline { font: 700 calc(var(--ph) * .0185) / 1.18 var(--serif); -webkit-line-clamp: 3; margin-bottom: calc(var(--ph) * .006); }
+.brief .text { text-align: left; }
+.brief:nth-of-type(-n+2) { border-top: 0; padding-top: 0; }
+
+.no-img figure { display: none; }
+.module figure.lowres img { object-fit: contain; }
+.fullbleed figure.lowres { background: #000; }
+.page.bleed .folio { display: none; }
+
+@media (prefers-reduced-motion: reduce) { .issue { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+<nav class="sections" aria-label="Ressorts"></nav>
+<main class="issue" tabindex="0"></main>
+<script src="data.js"></script>
+<script>
+"use strict";
+
+const ACCENTS = {
+	"Nachrichten": "#c8102e", "Tech News": "#1a4fd6", "Mac": "#444446", "Design": "#d4550b",
+	"Web Development": "#007a63", "Italia": "#008c45", "Gaming": "#6f3fd8"
+};
+
+// Slot kinds pick articles: hero needs image and some text, image needs an image,
+// long prefers lots of text, brief prefers articles without image (so images go where they show).
+const TEMPLATES = {
+	opener: {
+		left: [
+			{ area: "1/1/3/7", type: "masthead" },
+			{ area: "3/1/13/7", kind: "hero", style: "hero", image: .52, cols: 2, dropcap: true }
+		],
+		right: [
+			{ area: "1/1/7/7", kind: "image", style: "side" },
+			{ area: "7/1/13/4", kind: "image", style: "feature", image: .46 },
+			{ area: "7/4/13/7", kind: "image", style: "feature", image: .46 }
+		]
+	},
+	newspaper: {
+		left: [
+			{ area: "1/1/6/7", kind: "image", style: "side" },
+			{ area: "6/1/13/4", kind: "image", style: "feature", image: .42 },
+			{ area: "6/4/13/7", kind: "image", style: "feature", image: .42 }
+		],
+		right: [
+			{ area: "1/1/8/7", kind: "long", style: "lead", cols: 3, dropcap: true },
+			{ area: "8/1/13/7", type: "briefs", count: 4, cols: 2 }
+		]
+	},
+	photo: {
+		left: [{ area: "1/1/13/7", kind: "photo", style: "fullbleed", id: "A" }],
+		right: [
+			{ area: "1/1/9/7", same: "A", style: "story", cols: 2, dropcap: true },
+			{ area: "9/1/13/7", kind: "image", style: "side" }
+		]
+	},
+	dark: {
+		dark: "left",
+		left: [{ area: "1/1/13/7", kind: "long", style: "story-dark", cols: 2, dropcap: true }],
+		right: [
+			{ area: "1/1/7/4", kind: "image", style: "feature", image: .5 },
+			{ area: "1/4/7/7", kind: "image", style: "feature", image: .5 },
+			{ area: "7/1/13/7", kind: "image", style: "side" }
+		]
+	},
+	text: {
+		left: [
+			{ area: "1/1/8/7", kind: "long", style: "lead", cols: 3, dropcap: true },
+			{ area: "8/1/13/7", type: "briefs", count: 4, cols: 2 }
+		],
+		right: [{ area: "1/1/13/7", type: "briefs", count: 8, cols: 2, title: "Kurz gemeldet" }]
+	}
+};
+const ROTATION = ["newspaper", "photo", "newspaper", "dark"];
+const LOOKAHEAD = 14;
+const PRIORITY = { photo: 0, hero: 0, image: 1, long: 2, brief: 3 };
+
+const hasImage = a => !!a.image;
+const matches = {
+	hero: a => hasImage(a) && a.text.length >= 150,
+	photo: a => hasImage(a) && a.text.length >= 350, // The story page next to the photo needs text
+	image: hasImage,
+	long: a => a.text.length >= 400,
+	brief: a => !hasImage(a)
+};
+
+function take(queue, kind) {
+	const window = queue.slice(0, LOOKAHEAD);
+	let i = window.findIndex(matches[kind]);
+	if (i < 0) i = 0;
+	return queue.splice(i, 1)[0];
+}
+
+function countIn(queue, kind) {
+	return queue.slice(0, LOOKAHEAD).filter(matches[kind]).length;
+}
+
+function chooseTemplate(queue, index) {
+	if (index === 0) return "opener";
+	const images = countIn(queue, "image");
+	for (let k = 0; k < ROTATION.length; k++) {
+		const name = ROTATION[(index - 1 + k) % ROTATION.length];
+		const needed = { newspaper: 3, photo: 2, dark: 3 }[name];
+		if (name === "photo" && !countIn(queue, "photo")) continue;
+		if (images >= needed) return name;
+	}
+	return "text";
+}
+
+/// Distributes articles over spreads. Same articles, same issue.
+function paginate(articles) {
+	// The same story often comes from two feeds of one publisher. Keep the newest.
+	const seen = new Set();
+	const queue = articles.filter(a => {
+		const key = a.title.toLowerCase().replace(/\W+/g, " ").trim();
+		if (!key || !seen.has(key)) { seen.add(key); return true; }
+		return false;
+	});
+	const spreads = [];
+	while (queue.length) {
+		const name = chooseTemplate(queue, spreads.length);
+		const template = TEMPLATES[name];
+		const slots = [...template.left.map(s => ({ ...s, page: "left" })), ...template.right.map(s => ({ ...s, page: "right" }))];
+		const byID = {};
+		const ordered = slots.filter(s => s.kind || s.type === "briefs")
+			.sort((a, b) => PRIORITY[a.kind || "brief"] - PRIORITY[b.kind || "brief"]);
+		for (const slot of ordered) {
+			if (!queue.length) break;
+			if (slot.type === "briefs") {
+				slot.articles = [];
+				for (let i = 0; i < slot.count && queue.length; i++) slot.articles.push(take(queue, "brief"));
+			} else {
+				slot.article = take(queue, slot.kind);
+				if (slot.id) byID[slot.id] = slot.article;
+			}
+		}
+		for (const slot of slots) if (slot.same) slot.article = byID[slot.same];
+		spreads.push({ name, dark: template.dark, slots });
+	}
+	return spreads;
+}
+
+// MARK: Rendering
+
+const timeFormat = new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit" });
+const dayFormat = new Intl.DateTimeFormat("de-DE", { weekday: "short", day: "numeric", month: "short" });
+
+function when(date) {
+	if (!date) return "";
+	const d = new Date(date);
+	const today = new Date();
+	return d.toDateString() === today.toDateString() ? timeFormat.format(d) : dayFormat.format(d);
+}
+
+function el(tag, className, text) {
+	const e = document.createElement(tag);
+	if (className) e.className = className;
+	if (text != null) e.textContent = text;
+	return e;
+}
+
+function kicker(article) {
+	const k = el("div", "kicker");
+	k.append(el("span", null, article.feed), el("time", null, when(article.date)));
+	return k;
+}
+
+function textBlock(article, cols, dropcap) {
+	const t = el("div", "text" + (dropcap ? " dropcap" : ""));
+	if (cols > 1) t.style.columnCount = cols;
+	t.append(el("p", null, ""));
+	t.dataset.full = article.text.replace(/\s+/g, " ").trim();
+	return t;
+}
+
+function figure(article, onFail) {
+	const f = el("figure");
+	const img = el("img");
+	img.alt = "";
+	img.loading = "lazy";
+	img.referrerPolicy = "no-referrer";
+	img.src = article.image;
+	img.onerror = onFail;
+	// Many feeds only offer small images. Rather than blowing them up, show them whole.
+	img.onload = () => {
+		if (img.naturalWidth < f.clientWidth * .6) f.classList.add("lowres");
+	};
+	f.append(img);
+	return f;
+}
+
+function module(slot) {
+	const a = slot.article;
+	const m = el("a", "module " + slot.style + (a.read ? " read" : ""));
+	m.href = a.url || "#";
+	m.style.gridArea = slot.area;
+	m.addEventListener("click", event => markRead(event, a, m));
+
+	const wantsImage = a.image && slot.style !== "story" && slot.style !== "story-dark" && slot.style !== "lead";
+	if (!wantsImage) m.classList.add("no-img");
+
+	if (slot.style === "fullbleed") {
+		const f = figure(a, () => m.classList.add("no-img"));
+		const caption = el("figcaption", null, a.title);
+		m.append(f, caption);
+		return m;
+	}
+
+	const fail = () => { m.classList.add("no-img"); fitText(m.querySelector(".text")); };
+	if (slot.style === "side") {
+		if (wantsImage) m.append(figure(a, fail));
+		const body = el("div", "body");
+		body.append(kicker(a), headline(a), textBlock(a, 1, false));
+		m.append(body);
+		return m;
+	}
+	if (wantsImage) {
+		const f = figure(a, fail);
+		f.style.height = `calc(var(--ph) * 12 / 12 * ${slot.image || .45} * ${rowsOf(slot.area) / 12})`;
+		m.append(f);
+	}
+	m.append(kicker(a), headline(a), textBlock(a, slot.cols || 1, slot.dropcap && a.text.length > 120));
+	return m;
+}
+
+function headline(article) {
+	return el("h2", "headline", article.title || article.text.slice(0, 80));
+}
+
+function rowsOf(area) {
+	const [r1, , r2] = area.split("/").map(Number);
+	return r2 - r1;
+}
+
+function briefs(slot) {
+	const b = el("section", "briefs");
+	b.style.gridArea = slot.area;
+	const rows = Math.ceil(slot.articles.length / slot.cols);
+	b.style.gridTemplateColumns = `repeat(${slot.cols}, 1fr)`;
+	b.style.gridTemplateRows = (slot.title ? "auto " : "") + `repeat(${rows}, minmax(0, 1fr))`;
+	if (slot.title) b.append(el("h2", null, slot.title));
+	for (const a of slot.articles) {
+		const m = el("a", "module brief no-img" + (a.read ? " read" : ""));
+		m.href = a.url || "#";
+		m.addEventListener("click", event => markRead(event, a, m));
+		m.append(kicker(a), headline(a), textBlock(a, 1, false));
+		b.append(m);
+	}
+	return b;
+}
+
+function masthead(section, articles) {
+	const m = el("header", "masthead");
+	m.style.gridArea = "1/1/3/7";
+	const unread = articles.filter(a => !a.read).length;
+	const line = el("div", "dateline");
+	line.append(
+		el("span", null, new Intl.DateTimeFormat("de-DE", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date())),
+		el("span", null, `${articles.length} Artikel, ${unread} ungelesen`)
+	);
+	m.append(el("h1", null, section.name), line);
+	return m;
+}
+
+function markRead(event, article, node) {
+	event.preventDefault();
+	article.read = true;
+	node.classList.add("read");
+	if (article.url) window.open(article.url, "_blank", "noopener");
+}
+
+/// Shortens the text word by word until it fits its box, then ends it with an ellipsis.
+function fitText(box) {
+	if (!box) return;
+	const p = box.firstChild;
+	const words = box.dataset.full.split(" ");
+	const fits = () => box.scrollHeight <= box.clientHeight + 1 && box.scrollWidth <= box.clientWidth + 1;
+	p.textContent = box.dataset.full;
+	if (fits()) return;
+	let lo = 0, hi = words.length;
+	while (lo < hi) {
+		const mid = Math.ceil((lo + hi) / 2);
+		p.textContent = words.slice(0, mid).join(" ") + " …";
+		if (fits()) lo = mid; else hi = mid - 1;
+	}
+	p.textContent = lo ? words.slice(0, lo).join(" ").replace(/[,;:.\-–]$/, "") + " …" : "";
+}
+
+function render(section) {
+	const issue = document.querySelector(".issue");
+	issue.replaceChildren();
+	document.documentElement.style.setProperty("--accent", ACCENTS[section.name] || "#c8102e");
+	const spreads = paginate(section.articles);
+	let pageNumber = 1;
+	const dateline = new Intl.DateTimeFormat("de-DE", { day: "numeric", month: "long", year: "numeric" }).format(new Date());
+
+	for (const spread of spreads) {
+		const s = el("div", "spread");
+		for (const side of ["left", "right"]) {
+			const page = el("div", "page " + side + (spread.dark === side ? " dark" : ""));
+			if (spread.slots.some(x => x.page === side && x.style === "fullbleed")) page.classList.add("bleed");
+			for (const slot of spread.slots.filter(x => x.page === side)) {
+				if (slot.type === "masthead") page.append(masthead(section, section.articles));
+				else if (slot.type === "briefs" && slot.articles?.length) page.append(briefs(slot));
+				else if (slot.article) page.append(module(slot));
+			}
+			const folio = el("div", "folio");
+			const number = el("span", null, String(pageNumber++));
+			const label = el("span");
+			label.append(el("b", null, section.name), document.createTextNode("   " + dateline));
+			side === "left" ? folio.append(number, label) : folio.append(label, number);
+			page.append(folio);
+			s.append(page);
+		}
+		issue.append(s);
+	}
+	issue.scrollLeft = 0;
+	requestAnimationFrame(() => document.querySelectorAll(".text").forEach(fitText));
+}
+
+// MARK: Setup
+
+let current = window.SECTIONS[0];
+
+function sizePages() {
+	const issueHeight = window.innerHeight - 44 - 16;
+	const ph = Math.min(issueHeight - 32, (window.innerWidth - 96) / 1.48);
+	document.documentElement.style.setProperty("--ph", Math.max(480, Math.floor(ph)) + "px");
+}
+
+function buildNav() {
+	const nav = document.querySelector(".sections");
+	for (const section of window.SECTIONS) {
+		const b = el("button", null, section.name);
+		b.setAttribute("aria-pressed", section === current);
+		b.addEventListener("click", () => {
+			current = section;
+			nav.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+			render(section);
+		});
+		nav.append(b);
+	}
+}
+
+const issue = document.querySelector(".issue");
+issue.addEventListener("wheel", event => {
+	if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+		issue.scrollLeft += event.deltaY;
+		event.preventDefault();
+	}
+}, { passive: false });
+document.addEventListener("keydown", event => {
+	const spread = issue.querySelector(".spread");
+	if (!spread || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+	const step = spread.offsetWidth + 48;
+	issue.scrollBy({ left: event.key === "ArrowRight" ? step : -step, behavior: "smooth" });
+	event.preventDefault();
+});
+let resizeTimer;
+window.addEventListener("resize", () => {
+	clearTimeout(resizeTimer);
+	resizeTimer = setTimeout(() => { sizePages(); render(current); }, 150);
+});
+
+const params = new URLSearchParams(location.search);
+current = window.SECTIONS.find(s => s.name === params.get("section")) || current;
+sizePages();
+buildNav();
+render(current);
+const startSpread = Number(params.get("spread") || 0);
+if (startSpread) {
+	const first = issue.querySelector(".spread");
+	issue.scrollLeft = startSpread * (first.offsetWidth + 48);
+}
+</script>
+</body>
+</html>

@@ -58,11 +58,11 @@
 		<true/>
 	</dict>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>NetNewsWire communicates with other apps on your Mac when you choose to share an article.</string>
+	<string>RSS Feed Magazine communicates with other apps on your Mac when you choose to share an article.</string>
 	<key>NSAppleScriptEnabled</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string>Copyright © 2002-2026 Brent Simmons. All rights reserved.</string>
+	<string>© 2026 Ulf Schuster. Based on NetNewsWire, © 2002-2026 Brent Simmons.</string>
 	<key>NSMainNibFile</key>
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
@@ -75,14 +75,10 @@
 	<string>NetNewsWire.sdef</string>
 	<key>OrganizationIdentifier</key>
 	<string>$(ORGANIZATION_IDENTIFIER)</string>
-	<key>SUEnableInstallerLauncherService</key>
-	<true/>
-	<key>SUFeedURL</key>
-	<string>https://ranchero.com/downloads/netnewswire-release.xml</string>
 	<key>UserAgent</key>
-	<string>NetNewsWire (RSS Reader; https://netnewswire.com/)</string>
+	<string>RSSFeedMagazine (RSS Reader; https://github.com/Wiredframe/rss-feed-magazine)</string>
 	<key>UserAgentExtended</key>
-	<string>NetNewsWire (RSS Reader; https://netnewswire.com/; [platform]; [version] ([build]))</string>
+	<string>RSSFeedMagazine (RSS Reader; https://github.com/Wiredframe/rss-feed-magazine; [platform]; [version] ([build]))</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>

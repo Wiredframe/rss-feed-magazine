@@ -1,13 +1,16 @@
 // Common code signing configuration for all NetNewsWire targets
 
-CODE_SIGN_IDENTITY[sdk=macosx*] = Mac Developer
+CODE_SIGN_IDENTITY[sdk=macosx*] = Developer ID Application
 CODE_SIGN_IDENTITY[sdk=iphoneos*] = iPhone Developer
 CODE_SIGN_IDENTITY[sdk=iphonesimulator*] = iPhone Developer
-CODE_SIGN_STYLE = Automatic
-ORGANIZATION_IDENTIFIER = com.ranchero
-DEVELOPMENT_TEAM = M8L2WTLA8W
+// RSS Feed Magazine: signed with Ulf Schuster’s Developer ID, no provisioning profiles.
+CODE_SIGN_STYLE = Manual
+ORGANIZATION_IDENTIFIER = de.wiredframe
+DEVELOPMENT_TEAM = 7RN999S858
 PROVISIONING_PROFILE_SPECIFIER =
-DEVELOPER_ENTITLEMENTS =
+// The -dev entitlements (no iCloud, no sandbox) also turn on isDeveloperBuild, which hides
+// iCloud, Feedly, Inoreader and the Reader view. Those need Ranchero’s entitlements or API keys.
+DEVELOPER_ENTITLEMENTS = -dev
 
 // developers can locally override the Xcode settings for code signing
 // by creating a DeveloperSettings.xcconfig file locally at the appropriate path

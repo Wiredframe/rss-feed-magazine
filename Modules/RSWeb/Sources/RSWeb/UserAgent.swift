@@ -28,7 +28,7 @@ nonisolated public struct UserAgent {
 	/// The app replaces this at startup with the article web view's actual
 	/// user agent, so the two match. This value is the fallback.
 	/// <https://github.com/Ranchero-Software/NetNewsWire/issues/4868>
-	@MainActor public static var browserUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) NetNewsWire"
+	@MainActor public static var browserUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) RSSFeedMagazine"
 
 	public static func fromInfoPlist() -> String? {
 

@@ -25,7 +25,14 @@ final class TimelineTableRowView: NSTableRowView {
 	override var isSelected: Bool {
 		didSet {
 			cellView?.isSelected = isSelected
-			separator?.isHidden = isSelected
+			updateSeparatorVisibility()
+		}
+	}
+
+	// The selection is drawn with rounded corners. Like Mail, don’t draw a separator touching it.
+	override var isNextRowSelected: Bool {
+		didSet {
+			updateSeparatorVisibility()
 		}
 	}
 
@@ -52,19 +59,46 @@ final class TimelineTableRowView: NSTableRowView {
 		}
 	}
 
+	override func layout() {
+		super.layout()
+		layoutSeparator()
+	}
+
+	override func viewDidChangeEffectiveAppearance() {
+		super.viewDidChangeEffectiveAppearance()
+		needsLayout = true
+	}
+
 	private func addSeparatorView() {
-		guard let cellView = cellView, separator == nil else { return }
-		separator = NSView()
-		separator!.translatesAutoresizingMaskIntoConstraints = false
-		separator!.wantsLayer = true
-		separator!.layer?.backgroundColor = Assets.Colors.timelineSeparator.cgColor
-		addSubview(separator!)
-		NSLayoutConstraint.activate([
-			separator!.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: 20),
-			separator!.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -4),
-			separator!.heightAnchor.constraint(equalToConstant: 1),
-			separator!.bottomAnchor.constraint(equalTo: bottomAnchor, constant: 0)
-		])
+		guard separator == nil else {
+			return
+		}
+		let separator = NSView()
+		separator.wantsLayer = true
+		addSubview(separator)
+		self.separator = separator
+		updateSeparatorVisibility()
+		needsLayout = true
+	}
+
+	/// A hairline from the start of the text to its end, so it lines up with titles and images.
+	private func layoutSeparator() {
+		guard let separator, let cellView else {
+			return
+		}
+		effectiveAppearance.performAsCurrentDrawingAppearance {
+			separator.layer?.backgroundColor = Assets.Colors.timelineSeparator.cgColor
+		}
+		let insets = cellView.textHorizontalInsets
+		let lineWidth = 1.0 / (window?.backingScaleFactor ?? 2.0)
+		let minX = cellView.frame.minX + insets.leading
+		let maxX = cellView.frame.maxX - insets.trailing
+		let y = isFlipped ? bounds.maxY - lineWidth : bounds.minY
+		separator.frame = NSRect(x: minX, y: y, width: max(0, maxX - minX), height: lineWidth)
+	}
+
+	private func updateSeparatorVisibility() {
+		separator?.isHidden = isSelected || isNextRowSelected
 	}
 
 }

@@ -23,7 +23,7 @@ import Sparkle
 import Images
 import HTMLMetadata
 
-let appName = "NetNewsWire"
+let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "RSS Feed Magazine"
 
 @MainActor var appDelegate: AppDelegate!
 
@@ -53,6 +53,11 @@ let appName = "NetNewsWire"
 
 	@IBOutlet var debugMenuItem: NSMenuItem!
 	@IBOutlet var useColumnLayoutMenuItem: NSMenuItem?
+	@IBOutlet var showTimelineImagesMenuItem: NSMenuItem?
+	@IBOutlet var useMagazineLayoutMenuItem: NSMenuItem?
+	@IBOutlet var fadeReadArticlesMenuItem: NSMenuItem?
+	@IBOutlet var showReadArticlesInFoldersMenuItem: NSMenuItem?
+	@IBOutlet var articlesPerViewMenu: NSMenu?
 	@IBOutlet var showStatusBarMenuItem: NSMenuItem?
 	@IBOutlet var showStatusBarThemeMenuMenuItem: NSMenuItem?
 	@IBOutlet var checkForUpdatesMenuItem: NSMenuItem!
@@ -111,11 +116,9 @@ let appName = "NetNewsWire"
 		super.init()
 
 		appDelegate = self
-		let crashReporterConfig = PLCrashReporterConfig.defaultConfiguration()
-		if let crashReporter = PLCrashReporter(configuration: crashReporterConfig) {
-			crashReporter.enable()
-			self.crashReporter = crashReporter
-		}
+		AppRenameMigration.moveDataFolderIfNeeded() // Before AccountManager reads the data folder
+		// RSS Feed Magazine doesn’t enable PLCrashReporter: its reports go to netnewswire.com,
+		// which shouldn’t get crashes from this fork. macOS still writes its own crash reports.
 
 		AccountManager.shared.start()
 
@@ -173,25 +176,31 @@ let appName = "NetNewsWire"
 		// Load now, while the app bundle is readable. A translocated app that gets moved can’t read it later.
 		_ = MainWindowKeyboardHandler.shared
 
-		// Ensure the Sparkle feed URL is one of the two supported URLs.
-		// Default to the release builds URL from Info.plist.
-		if let infoDictionary = Bundle.main.infoDictionary,
-		   let releaseBuildsURL = infoDictionary["SUFeedURL"] as? String,
-		   let testBuildsURL = infoDictionary["FeedURLForTestBuilds"] as? String,
-		   let currentFeedURL = UserDefaults.standard.string(forKey: "SUFeedURL"),
-		   currentFeedURL != releaseBuildsURL && currentFeedURL != testBuildsURL {
-			UserDefaults.standard.set(releaseBuildsURL, forKey: "SUFeedURL")
-		}
+		// RSS Feed Magazine is updated through Homebrew. Info.plist has no SUFeedURL,
+		// so Sparkle never replaces it with NetNewsWire from ranchero.com.
+		if Bundle.main.infoDictionary?["SUFeedURL"] != nil {
+			// Ensure the Sparkle feed URL is one of the two supported URLs.
+			// Default to the release builds URL from Info.plist.
+			if let infoDictionary = Bundle.main.infoDictionary,
+			   let releaseBuildsURL = infoDictionary["SUFeedURL"] as? String,
+			   let testBuildsURL = infoDictionary["FeedURLForTestBuilds"] as? String,
+			   let currentFeedURL = UserDefaults.standard.string(forKey: "SUFeedURL"),
+			   currentFeedURL != releaseBuildsURL && currentFeedURL != testBuildsURL {
+				UserDefaults.standard.set(releaseBuildsURL, forKey: "SUFeedURL")
+			}
 
-		// Initialize Sparkle...
-		let hostBundle = Bundle.main
-		let updateDriver = SPUStandardUserDriver(hostBundle: hostBundle, delegate: self)
-		softwareUpdater = SPUUpdater(hostBundle: hostBundle, applicationBundle: hostBundle, userDriver: updateDriver, delegate: self)
+			// Initialize Sparkle...
+			let hostBundle = Bundle.main
+			let updateDriver = SPUStandardUserDriver(hostBundle: hostBundle, delegate: self)
+			softwareUpdater = SPUUpdater(hostBundle: hostBundle, applicationBundle: hostBundle, userDriver: updateDriver, delegate: self)
 
-		do {
-			try softwareUpdater?.start()
-		} catch {
-			Self.logger.error("Failed to start software updater with error: \(error.localizedDescription)")
+			do {
+				try softwareUpdater?.start()
+			} catch {
+				Self.logger.error("Failed to start software updater with error: \(error.localizedDescription)")
+			}
+		} else {
+			checkForUpdatesMenuItem.isHidden = true
 		}
 
 		AppDefaults.shared.registerDefaults()
@@ -200,7 +209,7 @@ let appName = "NetNewsWire"
 			Self.logger.debug("Is first run.")
 		}
 		let localAccount = AccountManager.shared.defaultAccount
-		if isFirstRun && !AccountManager.shared.anyAccountHasAtLeastOneFeed() {
+		if isFirstRun && !AppRenameMigration.didMoveDataFolder && !AccountManager.shared.anyAccountHasAtLeastOneFeed() {
 			// Import default feeds.
 			DefaultFeedsImporter.importDefaultFeeds(account: localAccount)
 		}
@@ -258,6 +267,7 @@ let appName = "NetNewsWire"
 		ExtensionFeedAddRequestFile.shared.start()
 #endif
 
+		MediaRSSMigration.runIfNeeded() // Before the first refresh
 		refreshTimer = AccountRefreshTimer()
 		ArticleStatusSyncTimer.shared.start()
 
@@ -294,6 +304,10 @@ let appName = "NetNewsWire"
 				CrashReporter.check(crashReporter: crashReporter)
 			}
 		}
+
+		#if DEBUG
+		MagazinePDFExporter.exportForTestingIfRequested()
+		#endif
 	}
 
 	func application(_ application: NSApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([NSUserActivityRestoring]) -> Void) -> Bool {
@@ -771,6 +785,36 @@ let appName = "NetNewsWire"
 
 	@IBAction func toggleColumnLayout(_ sender: Any?) {
 		AppDefaults.shared.useColumnLayout.toggle()
+		if AppDefaults.shared.useColumnLayout {
+			AppDefaults.shared.useMagazineLayout = false
+		}
+	}
+
+	@IBAction func toggleShowReadArticlesInFolders(_ sender: Any?) {
+		AppDefaults.shared.foldersShowReadArticles.toggle()
+	}
+
+	/// The menu item’s tag is the number of articles, 0 for all.
+	@IBAction func setArticlesPerView(_ sender: Any?) {
+		guard let menuItem = sender as? NSMenuItem else {
+			return
+		}
+		AppDefaults.shared.articlesPerView = menuItem.tag
+	}
+
+	@IBAction func toggleFadeReadArticles(_ sender: Any?) {
+		AppDefaults.shared.magazineFadesReadArticles.toggle()
+	}
+
+	@IBAction func toggleMagazineLayout(_ sender: Any?) {
+		AppDefaults.shared.useMagazineLayout.toggle()
+		if AppDefaults.shared.useMagazineLayout {
+			AppDefaults.shared.useColumnLayout = false
+		}
+	}
+
+	@IBAction func toggleTimelineImages(_ sender: Any?) {
+		AppDefaults.shared.timelineShowsImages.toggle()
 	}
 
 	@IBAction func toggleStatusBar(_ sender: Any?) {
@@ -898,6 +942,13 @@ extension AppDelegate {
 
 	@MainActor func updateColumnLayoutMenuItem() {
 		useColumnLayoutMenuItem?.state = AppDefaults.shared.useColumnLayout ? .on : .off
+		showTimelineImagesMenuItem?.state = AppDefaults.shared.timelineShowsImages ? .on : .off
+		useMagazineLayoutMenuItem?.state = AppDefaults.shared.useMagazineLayout ? .on : .off
+		fadeReadArticlesMenuItem?.state = AppDefaults.shared.magazineFadesReadArticles ? .on : .off
+		showReadArticlesInFoldersMenuItem?.state = AppDefaults.shared.foldersShowReadArticles ? .on : .off
+		for menuItem in articlesPerViewMenu?.items ?? [] {
+			menuItem.state = menuItem.tag == AppDefaults.shared.articlesPerView ? .on : .off
+		}
 	}
 
 	@MainActor func updateStatusBarMenuItems() {

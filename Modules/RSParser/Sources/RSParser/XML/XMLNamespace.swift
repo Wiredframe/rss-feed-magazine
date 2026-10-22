@@ -52,6 +52,11 @@ public struct XMLNamespace: Sendable, Equatable, Hashable {
 		uri == URI.mediaRSS
 	}
 
+	/// The ARD’s metaplus module (`mp:`), used by tagesschau.de and BR24 for article images.
+	public var isMetaPlus: Bool {
+		uri == URI.metaPlus
+	}
+
 	public var isITunes: Bool {
 		uri == URI.itunes
 	}
@@ -72,6 +77,7 @@ public struct XMLNamespace: Sendable, Equatable, Hashable {
 		public static let xhtml = "http://www.w3.org/1999/xhtml"
 		public static let mediaRSS = "http://search.yahoo.com/mrss/"
 		public static let itunes = "http://www.itunes.com/dtds/podcast-1.0.dtd"
+		public static let metaPlus = "http://www.tagesschau.de/rss/1.1/modules/metaplus/1.1.1/"
 		public static let source = "https://source.scripting.com/"
 	}
 }

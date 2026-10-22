@@ -50,6 +50,11 @@ final class AppDefaults: Sendable {
 		static let timelineSortDirection = "timelineSortDirection"
 		static let timelineGroupByFeed = "timelineGroupByFeed"
 		static let useColumnLayout = "useColumnLayout"
+		static let useMagazineLayout = "useMagazineLayout"
+		static let magazineFadesReadArticles = "magazineFadesReadArticles"
+		static let foldersShowReadArticles = "foldersShowReadArticles"
+		static let articlesPerView = "articlesPerView"
+		static let timelineShowsImages = "timelineShowsImages"
 		static let showStatusBar = "showStatusBar"
 		static let showStatusBarThemeMenu = "showStatusBarThemeMenu"
 		static let statusBarCountMode = "statusBarCountMode"
@@ -308,6 +313,56 @@ final class AppDefaults: Sendable {
 		}
 	}
 
+	/// Magazine layout: one horizontally scrolling surface instead of timeline and article view. Applies to all windows.
+	var useMagazineLayout: Bool {
+		get {
+			AppDefaults.bool(for: Key.useMagazineLayout)
+		}
+		set {
+			AppDefaults.setBool(for: Key.useMagazineLayout, newValue)
+		}
+	}
+
+	/// Folders show read articles too, like feeds do. The timeline’s filter button still hides them. Applies to all windows.
+	var foldersShowReadArticles: Bool {
+		get {
+			AppDefaults.bool(for: Key.foldersShowReadArticles)
+		}
+		set {
+			AppDefaults.setBool(for: Key.foldersShowReadArticles, newValue)
+		}
+	}
+
+	/// How many of the newest articles a timeline (and the magazine) shows. 0 means all.
+	var articlesPerView: Int {
+		get {
+			AppDefaults.int(for: Key.articlesPerView)
+		}
+		set {
+			AppDefaults.setInt(for: Key.articlesPerView, newValue)
+		}
+	}
+
+	/// Read articles in the magazine fade to show they’re read. Applies to all windows.
+	var magazineFadesReadArticles: Bool {
+		get {
+			AppDefaults.bool(for: Key.magazineFadesReadArticles)
+		}
+		set {
+			AppDefaults.setBool(for: Key.magazineFadesReadArticles, newValue)
+		}
+	}
+
+	/// Article images below the text in the standard timeline. Applies to all windows.
+	var timelineShowsImages: Bool {
+		get {
+			AppDefaults.bool(for: Key.timelineShowsImages)
+		}
+		set {
+			AppDefaults.setBool(for: Key.timelineShowsImages, newValue)
+		}
+	}
+
 	/// The main window status bar. Applies to all windows.
 	var showStatusBar: Bool {
 		get {
@@ -316,17 +371,6 @@ final class AppDefaults: Sendable {
 		set {
 			AppDefaults.setBool(for: Key.showStatusBar, newValue)
 		}
-	}
-
-	/// The status bar is off by default on macOS 26 and on by default everywhere else.
-	private static var showStatusBarDefault: Bool {
-		if #available(macOS 27.0, *) {
-			return true
-		}
-		if #available(macOS 26.0, *) {
-			return false
-		}
-		return true
 	}
 
 	var showStatusBarThemeMenu: Bool {
@@ -405,7 +449,13 @@ final class AppDefaults: Sendable {
 			Key.timelineSortDirection: ComparisonResult.orderedDescending.rawValue,
 			Key.timelineGroupByFeed: false,
 			Key.useColumnLayout: false,
-			Key.showStatusBar: Self.showStatusBarDefault,
+			Key.useMagazineLayout: true,
+			Key.magazineFadesReadArticles: false,
+			Key.foldersShowReadArticles: true,
+			Key.articlesPerView: 100,
+			Key.timelineShowsImages: true,
+			Key.timelineShowsSeparators: true, // With images, separators show which title belongs to which image
+			Key.showStatusBar: false, // RSS Feed Magazine: off; View > Show Status Bar turns it on
 			Key.showStatusBarThemeMenu: true,
 			Key.statusBarCountMode: StatusBarCountMode.lastRefresh.rawValue,
 			"NSScrollViewShouldScrollUnderTitlebar": false,

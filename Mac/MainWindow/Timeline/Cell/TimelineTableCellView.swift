@@ -19,6 +19,7 @@ final class TimelineTableCellView: NSTableCellView {
 	private let feedNameView = TimelineTableCellView.singleLineTextField()
 
 	private lazy var iconView = IconView()
+	private lazy var articleImageView = TimelineImageView()
 
 	private var starView = TimelineTableCellView.imageView(with: Assets.Images.timelineStar, scaling: .scaleNone)
 
@@ -31,6 +32,7 @@ final class TimelineTableCellView: NSTableCellView {
 			if cellAppearance != oldValue {
 				updateTextFieldFonts()
 				iconView.layer?.cornerRadius = cellAppearance.iconCornerRadius
+				articleImageView.cornerRadius = cellAppearance.imageCornerRadius
 				needsLayout = true
 			}
 		}
@@ -39,6 +41,7 @@ final class TimelineTableCellView: NSTableCellView {
 	var cellData: TimelineCellData! {
 		didSet {
 			updateSubviews()
+			superview?.needsLayout = true // The row view’s separator follows the text insets
 		}
 	}
 
@@ -58,6 +61,18 @@ final class TimelineTableCellView: NSTableCellView {
 
 	nonisolated override var isFlipped: Bool {
 		return true
+	}
+
+	/// Where the text (and article image) starts and ends. The row view aligns its separator with it, as Mail does.
+	var textHorizontalInsets: (leading: CGFloat, trailing: CGFloat) {
+		guard let cellAppearance, let cellData else {
+			return (0, 0)
+		}
+		var leading = cellAppearance.boxLeftMargin
+		if cellData.showIcon {
+			leading += cellAppearance.iconSize.width + cellAppearance.iconMarginRight
+		}
+		return (leading, cellAppearance.cellPadding.right)
 	}
 
 	override init(frame frameRect: NSRect) {
@@ -107,6 +122,7 @@ final class TimelineTableCellView: NSTableCellView {
 		feedNameView.setFrameIfNotEqual(layoutRects.feedNameRect)
 		iconView.setFrameIfNotEqual(layoutRects.iconImageRect)
 		starView.setFrameIfNotEqual(layoutRects.starRect)
+		articleImageView.setFrameIfNotEqual(layoutRects.imageRect)
 	}
 }
 
@@ -188,6 +204,7 @@ private extension TimelineTableCellView {
 		addSubviewAtInit(feedNameView, hidden: true)
 		addSubviewAtInit(iconView, hidden: true)
 		addSubviewAtInit(starView, hidden: true)
+		addSubviewAtInit(articleImageView, hidden: true)
 
 		makeTextFieldColorsNormal()
 	}
@@ -274,6 +291,16 @@ private extension TimelineTableCellView {
 		}
 	}
 
+	func updateArticleImage() {
+		guard cellData.imageURL != nil else {
+			articleImageView.image = nil
+			hideView(articleImageView)
+			return
+		}
+		showView(articleImageView)
+		articleImageView.image = cellData.image
+	}
+
 	func makeIconEmpty() {
 		if iconView.iconImage != nil {
 			iconView.iconImage = nil
@@ -311,5 +338,6 @@ private extension TimelineTableCellView {
 		updateUnreadIndicator()
 		updateStarView()
 		updateIcon()
+		updateArticleImage()
 	}
 }

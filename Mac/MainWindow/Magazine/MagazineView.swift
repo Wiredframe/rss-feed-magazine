@@ -27,7 +27,7 @@ import Account
 	@Published var fadesReadArticles = AppDefaults.shared.magazineFadesReadArticles // View menu; never on paper
 
 	private var articles = [Article]()
-	private var readingOrder = [MagazineStop]() // Every article once, block by block, for the arrow keys
+	private var readingOrder = [MagazineStop]() // Every article where it appears, block by block, for the arrow keys
 
 	/// The block at the leading edge. Saved per sidebar selection as the article it starts with,
 	/// so the position survives new articles shifting the layout, switching folders, and quitting.
@@ -86,8 +86,8 @@ import Account
 	}
 
 	/// The article before or after the focused one. Nil at either end.
-	func stop(from articleID: String, offset: Int) -> MagazineStop? {
-		guard let index = readingOrder.firstIndex(where: { $0.articleID == articleID }) else {
+	func stop(from stop: MagazineStop, offset: Int) -> MagazineStop? {
+		guard let index = readingOrder.firstIndex(of: stop) else {
 			return leadingStop
 		}
 		let target = index + offset
@@ -95,9 +95,15 @@ import Account
 	}
 }
 
-struct MagazineStop {
+/// One place where an article appears. A photo block and the story next to it show the same article,
+/// so the article alone isn’t enough to tell where keyboard focus is.
+struct MagazineStop: Hashable {
 	let articleID: String
 	let blockID: String
+}
+
+extension EnvironmentValues {
+	@Entry var magazineBlockID = ""
 }
 
 private extension MagazineModel {
@@ -127,7 +133,7 @@ private extension MagazineModel {
 struct MagazineView: View {
 
 	@ObservedObject var model: MagazineModel
-	@FocusState private var focusedArticleID: String?
+	@FocusState private var focusedStop: MagazineStop?
 
 	var body: some View {
 		GeometryReader { geometry in
@@ -136,7 +142,7 @@ struct MagazineView: View {
 				ScrollView(.horizontal, showsIndicators: true) {
 					LazyHStack(alignment: .top, spacing: metrics.blockGap) {
 						ForEach(visibleBlocks) { block in
-							MagazineBlockView(block: block, metrics: metrics, model: model, focus: $focusedArticleID)
+							MagazineBlockView(block: block, metrics: metrics, model: model, focus: $focusedStop)
 						}
 					}
 					.scrollTargetLayout()
@@ -148,7 +154,7 @@ struct MagazineView: View {
 				.scrollPosition(id: $model.leadingBlockID, anchor: .leading)
 				.background(Color(nsColor: .textBackgroundColor))
 				.onChange(of: model.focusRequest) {
-					if focusedArticleID == nil, let stop = model.leadingStop {
+					if focusedStop == nil, let stop = model.leadingStop {
 						move(to: stop, proxy: proxy)
 					}
 				}
@@ -162,17 +168,17 @@ private extension MagazineView {
 	/// Arrow keys go from article to article in reading order, ← from the first one back to the sidebar.
 	/// Return opens, S stars, R and U toggle read, like in the timeline.
 	func handleKeyPress(_ press: KeyPress, proxy: ScrollViewProxy) -> KeyPress.Result {
-		guard let articleID = focusedArticleID, press.modifiers.isDisjoint(with: [.command, .control, .option]) else {
+		guard let focusedStop, press.modifiers.isDisjoint(with: [.command, .control, .option]) else {
 			return .ignored
 		}
 		switch press.key {
 		case .rightArrow, .downArrow:
-			if let stop = model.stop(from: articleID, offset: 1) {
+			if let stop = model.stop(from: focusedStop, offset: 1) {
 				move(to: stop, proxy: proxy)
 			}
 			return .handled
 		case .leftArrow, .upArrow:
-			if let stop = model.stop(from: articleID, offset: -1) {
+			if let stop = model.stop(from: focusedStop, offset: -1) {
 				move(to: stop, proxy: proxy)
 			} else if press.key == .leftArrow {
 				NSApp.sendAction(#selector(MainWindowController.navigateToSidebar(_:)), to: nil, from: nil)
@@ -181,7 +187,7 @@ private extension MagazineView {
 		default:
 			break
 		}
-		guard let article = article(withID: articleID) else {
+		guard let article = article(withID: focusedStop.articleID) else {
 			return .ignored
 		}
 		switch press.key {
@@ -201,10 +207,10 @@ private extension MagazineView {
 
 	func move(to stop: MagazineStop, proxy: ScrollViewProxy) {
 		proxy.scrollTo(stop.blockID) // Just far enough to show the whole block
-		focusedArticleID = stop.articleID
+		focusedStop = stop
 		// A block that wasn’t on screen has no views yet to take focus. Try again once it’s laid out.
 		DispatchQueue.main.async {
-			focusedArticleID = stop.articleID
+			focusedStop = stop
 		}
 	}
 
@@ -218,7 +224,8 @@ struct MagazineArticleModifier: ViewModifier {
 
 	let item: MagazineItem
 	@ObservedObject var model: MagazineModel
-	let focus: FocusState<String?>.Binding? // None in a PDF
+	let focus: FocusState<MagazineStop?>.Binding? // None in a PDF
+	@Environment(\.magazineBlockID) private var blockID
 
 	func body(content: Content) -> some View {
 		let status = { _ = model.statusRevision; return item.article.status }()
@@ -256,7 +263,7 @@ struct MagazineArticleModifier: ViewModifier {
 		if let focus {
 			content
 				.focusable()
-				.focused(focus, equals: item.article.articleID)
+				.focused(focus, equals: MagazineStop(articleID: item.article.articleID, blockID: blockID))
 		} else {
 			content
 		}
@@ -376,7 +383,7 @@ struct MagazineBlockView: View {
 	let block: MagazineBlock
 	let metrics: MagazineMetrics
 	@ObservedObject var model: MagazineModel
-	var focus: FocusState<String?>.Binding? = nil
+	var focus: FocusState<MagazineStop?>.Binding? = nil
 
 	var body: some View {
 		let ink = block.isDark ? MagazineInk.dark : MagazineInk.paper
@@ -422,6 +429,7 @@ struct MagazineBlockView: View {
 			}
 		}
 		.environment(\.colorScheme, block.isDark ? .dark : colorScheme)
+		.environment(\.magazineBlockID, block.id)
 	}
 
 	@Environment(\.colorScheme) private var colorScheme
@@ -500,7 +508,7 @@ struct MagazineModuleView: View {
 	let size: CGSize
 	let isTinted: Bool // A light wash of the section’s color, so pages with few images aren’t all black and white
 	@ObservedObject var model: MagazineModel
-	let focus: FocusState<String?>.Binding?
+	let focus: FocusState<MagazineStop?>.Binding?
 
 	private var isRead: Bool {
 		_ = model.statusRevision
@@ -655,7 +663,7 @@ struct MagazineBriefsView: View {
 	let ink: MagazineInk
 	let isTinted: Bool
 	@ObservedObject var model: MagazineModel
-	let focus: FocusState<String?>.Binding?
+	let focus: FocusState<MagazineStop?>.Binding?
 
 	var body: some View {
 		VStack(alignment: .leading, spacing: 0) {

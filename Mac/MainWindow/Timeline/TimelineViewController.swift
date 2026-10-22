@@ -107,6 +107,12 @@ final class TimelineViewController: NSViewController, UndoableCommandRunner, Unr
 
 	}
 	weak var delegate: TimelineDelegate?
+
+	// In the magazine layout the table isn’t in the window, so the responder chain can’t reach
+	// the window’s undo manager. Marking articles there would silently do nothing without it.
+	override var undoManager: UndoManager? {
+		super.undoManager ?? (delegate as? NSViewController)?.undoManager
+	}
 	var sharingServiceDelegate: NSSharingServiceDelegate?
 
 	var showsSearchResults = false
@@ -1150,14 +1156,14 @@ extension TimelineViewController: NSTableViewDelegate {
 		cell.cellData = TimelineCellData()
 	}
 
-	private func toggleArticleRead(_ article: Article) {
+	func toggleArticleRead(_ article: Article) {
 		guard let undoManager = undoManager, let markUnreadCommand = MarkStatusCommand(initialArticles: [article], markingRead: !article.status.read, undoManager: undoManager) else {
 			return
 		}
 		self.runCommand(markUnreadCommand)
 	}
 
-	private func toggleArticleStarred(_ article: Article) {
+	func toggleArticleStarred(_ article: Article) {
 		guard let undoManager = undoManager, let markUnreadCommand = MarkStatusCommand(initialArticles: [article], markingStarred: !article.status.starred, undoManager: undoManager) else {
 			return
 		}

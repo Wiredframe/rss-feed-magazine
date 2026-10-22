@@ -598,6 +598,10 @@ final class MainWindowController: NSWindowController, NSUserInterfaceValidations
 	}
 
 	@IBAction func navigateToTimeline(_ sender: Any?) {
+		if timelineLayout == .magazine {
+			timelineContainerViewController?.focusMagazine()
+			return
+		}
 		currentTimelineViewController?.focus()
 	}
 

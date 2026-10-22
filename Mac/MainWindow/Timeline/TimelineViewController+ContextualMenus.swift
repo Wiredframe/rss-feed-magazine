@@ -26,6 +26,11 @@ extension TimelineViewController {
 		}
 		return menu(for: [article])
 	}
+
+	/// The same menu for an article in the magazine, which has no rows to click.
+	func contextualMenu(for article: Article) -> NSMenu? {
+		menu(for: [article])
+	}
 }
 
 // MARK: Contextual Menu Actions
@@ -212,6 +217,16 @@ private extension TimelineViewController {
 		let items = sortedArticles.map { ArticlePasteboardWriter(article: $0) }
 		let sharingServicePicker = NSSharingServicePicker(items: items)
 		sharingServicePicker.delegate = self.sharingServicePickerDelegate
+
+		// The magazine shows instead of the table: anchor the picker where the menu was opened.
+		if tableView.window == nil {
+			guard let contentView = NSApp.mainWindow?.contentView, let window = contentView.window else {
+				return
+			}
+			let location = contentView.convert(window.mouseLocationOutsideOfEventStream, from: nil)
+			sharingServicePicker.show(relativeTo: NSRect(origin: location, size: NSSize(width: 1, height: 1)), of: contentView, preferredEdge: .maxY)
+			return
+		}
 
 		// Anchor the picker to the first article being shared
 		let rowToAnchorTo: Int

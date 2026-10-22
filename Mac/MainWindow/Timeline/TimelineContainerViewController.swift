@@ -48,6 +48,15 @@ final class TimelineContainerViewController: NSViewController {
 		model.openArticle = { [weak self] article in
 			self?.currentTimelineViewController?.openArticleFromMagazine(article)
 		}
+		model.toggleRead = { [weak self] article in
+			self?.currentTimelineViewController?.toggleArticleRead(article)
+		}
+		model.toggleStarred = { [weak self] article in
+			self?.currentTimelineViewController?.toggleArticleStarred(article)
+		}
+		model.contextMenu = { [weak self] article in
+			self?.currentTimelineViewController?.contextualMenu(for: article)
+		}
 		return model
 	}()
 	private lazy var magazineView = NSHostingView(rootView: MagazineView(model: magazineModel))
@@ -205,6 +214,18 @@ final class TimelineContainerViewController: NSViewController {
 	func restoreLegacyState(from state: [AnyHashable: Any]) {
 		regularTimelineViewController.restoreLegacyState(from: state)
 		updateReadFilterButton()
+	}
+}
+
+extension TimelineContainerViewController {
+
+	/// Moves keyboard focus into the magazine, for instance with → from the sidebar.
+	func focusMagazine() {
+		guard layout == .magazine, let window = magazineView.window else {
+			return
+		}
+		window.makeFirstResponderUnlessDescendantIsFirstResponder(magazineView)
+		magazineModel.requestFocus()
 	}
 }
 

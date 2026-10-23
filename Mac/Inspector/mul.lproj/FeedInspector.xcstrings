@@ -1,24 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "aRe-yV-R0h.title" : {
-      "comment" : "Class = \"NSButtonCell\"; title = \"Always use Reader view\"; ObjectID = \"aRe-yV-R0h\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Always use Reader view"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Usar siempre la vista de lector"
-          }
-        }
-      }
-    },
     "Bw5-c7-yDX.title" : {
       "comment" : "Class = \"NSButtonCell\"; title = \"Show notifications for new articles\"; ObjectID = \"Bw5-c7-yDX\";",
       "extractionState" : "extracted_with_value",

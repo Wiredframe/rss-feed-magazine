@@ -19,7 +19,6 @@ final class FeedInspectorViewController: NSViewController, Inspector {
 	@IBOutlet var homePageURLTextField: NSTextField?
 	@IBOutlet var urlTextField: NSTextField?
 	@IBOutlet var newArticleNotificationsEnabledCheckBox: NSButton!
-	@IBOutlet var readerViewAlwaysEnabledCheckBox: NSButton?
 
 	private var feed: Feed? {
 		didSet {
@@ -108,10 +107,6 @@ final class FeedInspectorViewController: NSViewController, Inspector {
 		}
 	}
 
-	@IBAction func readerViewAlwaysEnabledChanged(_ sender: Any) {
-		feed?.readerViewAlwaysEnabled = (readerViewAlwaysEnabledCheckBox?.state ?? .off) == .on ? true : false
-	}
-
 	// MARK: Notifications
 
 	@objc func imageDidBecomeAvailable(_ note: Notification) {
@@ -142,9 +137,7 @@ private extension FeedInspectorViewController {
 		updateHomePageURL()
 		updateFeedURL()
 		updateNewArticleNotificationsEnabled()
-		updateReaderViewAlwaysEnabled()
 		windowTitle = feed?.nameForDisplay ?? NSLocalizedString("Feed Inspector", comment: "Feed Inspector window title")
-		readerViewAlwaysEnabledCheckBox?.isEnabled = true
 		view.needsLayout = true
 	}
 
@@ -177,10 +170,6 @@ private extension FeedInspectorViewController {
 	func updateNewArticleNotificationsEnabled() {
 		newArticleNotificationsEnabledCheckBox?.title = feed?.notificationDisplayName ?? NSLocalizedString("Show notifications for new articles", comment: "Show notifications for new articles")
 		newArticleNotificationsEnabledCheckBox?.state = (feed?.newArticleNotificationsEnabled ?? false) ? .on : .off
-	}
-
-	func updateReaderViewAlwaysEnabled() {
-		readerViewAlwaysEnabledCheckBox?.state = (feed?.readerViewAlwaysEnabled ?? false) ? .on : .off
 	}
 
 	func updateNotificationSettings() {

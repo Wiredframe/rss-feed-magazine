@@ -11,7 +11,6 @@
                 <outlet property="iconView" destination="I6k-QR-VmV" id="zrk-zx-zk7"/>
                 <outlet property="nameTextField" destination="IWu-80-XC5" id="zg4-5h-hoP"/>
                 <outlet property="newArticleNotificationsEnabledCheckBox" destination="ZBX-E8-k9c" id="FWc-Ds-LUy"/>
-                <outlet property="readerViewAlwaysEnabledCheckBox" destination="nH2-ab-KJ5" id="xPg-P5-3cr"/>
                 <outlet property="urlTextField" destination="Vvk-KG-JlG" id="bcl-fq-3nQ"/>
                 <outlet property="view" destination="ecA-UY-KEd" id="Hm8-2b-Vt1"/>
             </connections>
@@ -78,16 +77,6 @@
                         <action selector="newArticleNotificationsEnabledChanged:" target="-2" id="Vx9-pQ-RnP"/>
                     </connections>
                 </button>
-                <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="nH2-ab-KJ5">
-                    <rect key="frame" x="20" y="132" width="167" height="16"/>
-                    <buttonCell key="cell" type="check" title="Always use Reader view" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="aRe-yV-R0h">
-                        <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
-                        <font key="font" metaFont="system"/>
-                    </buttonCell>
-                    <connections>
-                        <action selector="readerViewAlwaysEnabledChanged:" target="-2" id="rsD-0e-ksP"/>
-                    </connections>
-                </button>
                 <customView translatesAutoresizingMaskIntoConstraints="NO" id="I6k-QR-VmV" customClass="IconView" customModule="NetNewsWire" customModuleProvider="target">
                     <rect key="frame" x="111" y="254" width="48" height="48"/>
                     <constraints>
@@ -99,9 +88,7 @@
             <constraints>
                 <constraint firstItem="zm0-15-BFy" firstAttribute="top" secondItem="2WO-Iu-p5e" secondAttribute="bottom" constant="4" id="2fb-QO-XIm"/>
                 <constraint firstItem="ZBX-E8-k9c" firstAttribute="top" secondItem="IWu-80-XC5" secondAttribute="bottom" constant="20" id="5L7-aZ-vdg"/>
-                <constraint firstItem="nH2-ab-KJ5" firstAttribute="leading" secondItem="ecA-UY-KEd" secondAttribute="leading" constant="20" symbolic="YES" id="8pK-lW-xQk"/>
                 <constraint firstItem="IWu-80-XC5" firstAttribute="top" secondItem="I6k-QR-VmV" secondAttribute="bottom" constant="8" symbolic="YES" id="Bea-j0-QMb"/>
-                <constraint firstItem="nH2-ab-KJ5" firstAttribute="top" secondItem="ZBX-E8-k9c" secondAttribute="bottom" constant="6" symbolic="YES" id="CpA-X9-EbP"/>
                 <constraint firstAttribute="bottom" secondItem="Vvk-KG-JlG" secondAttribute="bottom" constant="20" id="IxJ-5N-NhL"/>
                 <constraint firstAttribute="trailing" secondItem="ju6-Zo-8X4" secondAttribute="trailing" constant="20" symbolic="YES" id="Jzi-tP-TIw"/>
                 <constraint firstAttribute="trailing" secondItem="Vvk-KG-JlG" secondAttribute="trailing" constant="20" symbolic="YES" id="KAS-A7-TxB"/>
@@ -116,9 +103,8 @@
                 <constraint firstItem="I6k-QR-VmV" firstAttribute="centerX" secondItem="ecA-UY-KEd" secondAttribute="centerX" id="gFG-ZY-eNp"/>
                 <constraint firstAttribute="trailing" secondItem="zm0-15-BFy" secondAttribute="trailing" constant="20" symbolic="YES" id="js6-b2-FIR"/>
                 <constraint firstAttribute="trailing" secondItem="ZBX-E8-k9c" secondAttribute="trailing" constant="20" symbolic="YES" id="nOw-cs-o8e"/>
-                <constraint firstAttribute="trailing" relation="greaterThanOrEqual" secondItem="nH2-ab-KJ5" secondAttribute="trailing" constant="20" symbolic="YES" id="nRv-tr-KJ5"/>
                 <constraint firstItem="IWu-80-XC5" firstAttribute="leading" secondItem="ecA-UY-KEd" secondAttribute="leading" constant="20" symbolic="YES" id="r6h-Z0-g7b"/>
-                <constraint firstItem="2WO-Iu-p5e" firstAttribute="top" secondItem="nH2-ab-KJ5" secondAttribute="bottom" constant="20" id="rRv-qO-dPa"/>
+                <constraint firstItem="2WO-Iu-p5e" firstAttribute="top" secondItem="ZBX-E8-k9c" secondAttribute="bottom" constant="20" id="rRv-qO-dPa"/>
                 <constraint firstItem="Vvk-KG-JlG" firstAttribute="top" secondItem="ju6-Zo-8X4" secondAttribute="bottom" constant="4" id="sAt-dN-Taz"/>
                 <constraint firstItem="Vvk-KG-JlG" firstAttribute="leading" secondItem="ecA-UY-KEd" secondAttribute="leading" constant="20" symbolic="YES" id="uS2-JS-PPg"/>
             </constraints>

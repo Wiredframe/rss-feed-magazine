@@ -2,7 +2,7 @@
 
 // High Level Settings common to both the Mac application and any extensions we bundle with it
 // RSS Feed Magazine counts its own versions; it is based on NetNewsWire 7.3b1
-MARKETING_VERSION = 1.1.1
+MARKETING_VERSION = 1.1.2
 
 // Team-prefixed, so it works without a provisioning profile.
 APP_GROUP_ID = $(DEVELOPMENT_TEAM).$(ORGANIZATION_IDENTIFIER).RSSFeedMagazine$(APP_GROUP_SUFFIX)

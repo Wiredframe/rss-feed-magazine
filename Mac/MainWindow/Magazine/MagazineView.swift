@@ -233,6 +233,8 @@ struct MagazineArticleModifier: ViewModifier {
 			.onTapGesture {
 				model.openArticle?(item.article)
 			}
+			// Coming back from the browser, the click that brings the window forward opens the article too.
+			.allowsWindowActivationEvents(true)
 			.onHover { inside in
 				if inside {
 					NSCursor.pointingHand.push()

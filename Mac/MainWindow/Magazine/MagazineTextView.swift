@@ -108,6 +108,11 @@ final class MagazineTextNSView: NSView {
 		return true
 	}
 
+	/// Clicks go through to SwiftUI, which opens the article.
+	override func hitTest(_ point: NSPoint) -> NSView? {
+		nil
+	}
+
 	nonisolated static func lineHeight(forFontSize fontSize: CGFloat) -> CGFloat {
 		ceil(fontSize * lineHeightMultiple)
 	}

@@ -401,4 +401,38 @@ import RSParser
 		#expect(item.title == "Real Article Title")
 		#expect(item.url == "https://example.com/articles/1")
 	}
+
+	@Test func descriptionKeptAsSummaryNextToContentEncoded() throws {
+		// stol.it sends the text in <description> and sometimes only an image in <content:encoded>.
+		let xml = """
+		<?xml version="1.0" encoding="utf-8"?>
+		<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+		  <channel><title>t</title><link>https://example.com/</link>
+		    <item>
+		      <title>Both</title><guid>1</guid>
+		      <description>The teaser text.</description>
+		      <content:encoded><![CDATA[<img src="https://example.com/a.jpg">]]></content:encoded>
+		    </item>
+		    <item>
+		      <title>Encoded first</title><guid>2</guid>
+		      <content:encoded><![CDATA[<p>Body</p>]]></content:encoded>
+		      <description>Teaser</description>
+		    </item>
+		    <item>
+		      <title>Description only</title><guid>3</guid>
+		      <description>Only this.</description>
+		    </item>
+		  </channel>
+		</rss>
+		"""
+		let d = ParserData(url: "https://example.com/feed", data: Data(xml.utf8))
+		let feed = try #require(try FeedParser.parse(d))
+		let items = Dictionary(uniqueKeysWithValues: feed.items.compactMap { item in item.title.map { ($0, item) } })
+		#expect(items["Both"]?.contentHTML == "<img src=\"https://example.com/a.jpg\">")
+		#expect(items["Both"]?.summary == "The teaser text.")
+		#expect(items["Encoded first"]?.contentHTML == "<p>Body</p>")
+		#expect(items["Encoded first"]?.summary == "Teaser")
+		#expect(items["Description only"]?.contentHTML == "Only this.")
+		#expect(items["Description only"]?.summary == nil)
+	}
 }

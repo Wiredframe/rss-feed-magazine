@@ -256,6 +256,11 @@ private final class RSSDelegate: XMLSAXParserDelegate {
 			if namespace.isContent && localName.equals("encoded") {
 				let s = parser.currentStringWithTrimmedWhitespace
 				if let s, !s.isEmpty {
+					// A description read before it is kept as the summary: some feeds put the text there
+					// and only an image or a placeholder in content:encoded.
+					if article.summary == nil, let description = article.body, !description.isEmpty, description != s {
+						article.summary = description
+					}
 					article.body = s
 				}
 				return
@@ -285,6 +290,8 @@ private final class RSSDelegate: XMLSAXParserDelegate {
 		} else if localName.equals("description") {
 			if article.body == nil {
 				article.body = parser.currentStringWithTrimmedWhitespace
+			} else if article.summary == nil, let s = parser.currentStringWithTrimmedWhitespace, s != article.body {
+				article.summary = s // content:encoded came first
 			}
 		} else if !parsingAuthor && localName.equals("title") {
 			if let s = parser.currentStringWithTrimmedWhitespace {

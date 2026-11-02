@@ -588,13 +588,29 @@ struct MagazineModuleView: View {
 	}
 
 	private var isLargeHeadline: Bool {
+		Self.isLargeHeadline(style)
+	}
+
+	private var headlineLines: Int {
+		Self.headlineLines(style)
+	}
+
+	private var headlineSize: CGFloat {
+		var width = size.width - (isTinted ? tintPadding * 2 : 0)
+		if style == .side && item.hasImage {
+			width = (width - metrics.columnGap) / 2
+		}
+		return Self.headlineSize(style: style, title: item.title, width: width, metrics: metrics)
+	}
+
+	static func isLargeHeadline(_ style: MagazineModuleStyle) -> Bool {
 		switch style {
 		case .hero, .lead, .story, .darkStory: true
 		case .feature, .side, .photo: false
 		}
 	}
 
-	private var headlineLines: Int {
+	static func headlineLines(_ style: MagazineModuleStyle) -> Int {
 		switch style {
 		case .story, .darkStory, .side: 4
 		default: 3
@@ -603,7 +619,7 @@ struct MagazineModuleView: View {
 
 	/// The headline’s step on the scale follows the module’s rank and width. A title that wouldn’t fit
 	/// in its lines goes down a step or two instead of running on.
-	private var headlineSize: CGFloat {
+	static func headlineSize(style: MagazineModuleStyle, title: String, width: CGFloat, metrics: MagazineMetrics) -> CGFloat {
 		let defaultStep: Int = switch style {
 		case .feature, .photo: 2
 		case .side: 3
@@ -611,15 +627,11 @@ struct MagazineModuleView: View {
 		case .hero: 6
 		case .story, .darkStory: 7
 		}
-		var width = size.width - (isTinted ? tintPadding * 2 : 0)
-		if style == .side && item.hasImage {
-			width = (width - metrics.columnGap) / 2
-		}
 		var step = defaultStep
 		while step > max(0, defaultStep - 2) {
 			let fontSize = metrics.size(MagazineMetrics.headlineScale[step])
 			let charactersPerLine = max(1, width / (fontSize * 0.5))
-			if ceil(CGFloat(item.title.count) / charactersPerLine) <= CGFloat(headlineLines) {
+			if ceil(CGFloat(title.count) / charactersPerLine) <= CGFloat(headlineLines(style)) {
 				break
 			}
 			step -= 1

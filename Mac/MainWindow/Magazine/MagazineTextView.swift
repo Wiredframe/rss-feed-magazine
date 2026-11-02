@@ -335,17 +335,20 @@ private extension MagazineTextNSView {
 		return trimmed + " …"
 	}
 
+	static func language(of text: String) -> String? {
+		let recognizer = NLLanguageRecognizer()
+		recognizer.processString(String(text.prefix(400)))
+		return recognizer.dominantLanguage?.rawValue
+	}
+}
+
+extension MagazineTextNSView {
+
 	static func serifFont(size: CGFloat, weight: NSFont.Weight) -> NSFont {
 		let system = NSFont.systemFont(ofSize: size, weight: weight)
 		guard let descriptor = system.fontDescriptor.withDesign(.serif) else {
 			return system
 		}
 		return NSFont(descriptor: descriptor, size: size) ?? system
-	}
-
-	static func language(of text: String) -> String? {
-		let recognizer = NLLanguageRecognizer()
-		recognizer.processString(String(text.prefix(400)))
-		return recognizer.dominantLanguage?.rawValue
 	}
 }

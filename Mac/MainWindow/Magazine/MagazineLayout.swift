@@ -34,9 +34,7 @@ struct MagazineItem: Identifiable {
 	@MainActor init(article: Article, sections: MagazineSections) {
 		self.article = article
 		let title = ArticleStringFormatter.shared.truncatedTitle(article)
-		let html = Self.paragraphs(in: article.contentHTML ?? article.contentText ?? article.summary ?? "")
-		// Some feeds encode entities twice (&amp;uuml;), so decode twice.
-		var text = String(html.prefix(Self.maxHTMLLength)).strippingHTML(maxCharacters: Self.maxTextLength).decodingHTMLEntities().decodingHTMLEntities()
+		var text = Self.longestText(of: article)
 		if !title.isEmpty && text.hasPrefix(title) {
 			text = String(text.dropFirst(title.count)).trimmingCharacters(in: .whitespaces)
 		}
@@ -46,6 +44,29 @@ struct MagazineItem: Identifiable {
 		self.feedName = article.feed?.nameForDisplay ?? ""
 		self.accent = sections.color(forSection: sections.section(for: article))
 	}
+
+	/// RSS feeds can send a teaser and a body, and either can be the one with the text:
+	/// stol.it’s body is sometimes just an image, ZEIT’s sometimes just “None”.
+	private static func longestText(of article: Article) -> String {
+		let sources = [article.contentHTML, article.contentText, article.summary].compactMap { $0 }.sorted { $0.utf16.count > $1.utf16.count }
+		var best = ""
+		for source in sources {
+			// Stripping only shortens, so a source no longer than the best text can’t beat it.
+			guard source.utf16.count > best.utf16.count, best.count < maxTextLength else {
+				break
+			}
+			let html = paragraphs(in: source)
+			// Some feeds encode entities twice (&amp;uuml;), so decode twice.
+			let text = String(html.prefix(maxHTMLLength)).strippingHTML(maxCharacters: maxTextLength).decodingHTMLEntities().decodingHTMLEntities()
+			if text.count > best.count && !placeholderTexts.contains(text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) {
+				best = text
+			}
+		}
+		return best
+	}
+
+	/// What feeds put where the text should be when there is none.
+	private static let placeholderTexts: Set<String> = ["none", "null", "nil", "undefined"]
 
 	private static let maxHTMLLength = 12_000
 	private static let paragraphPattern = try? NSRegularExpression(pattern: "<p[\\s>].*?</p>", options: [.caseInsensitive, .dotMatchesLineSeparators])
@@ -64,7 +85,7 @@ struct MagazineItem: Identifiable {
 	private static let maxTextLength = 2_400
 
 	/// Feeds append things like “The post … appeared first on …” or links to their social accounts.
-	private static let boilerplateMarkers = [" Zum Beitrag:", " Weiterlesen", " Read more", " Continue reading", " The post ", " Wo du uns folgen kannst", " Read the full story"]
+	private static let boilerplateMarkers = [" Zum Beitrag:", " Weiterlesen", " Read more", " Continue reading", " The post ", " Wo du uns folgen kannst", " Read the full story", "[mehr]", "[ mehr ]"]
 
 	private static func removingBoilerplate(_ text: String) -> String {
 		var result = text
@@ -245,6 +266,7 @@ struct MagazineBlock: Identifiable {
 
 			for blockSpec in group.blocks where !queue.isEmpty || photoItem != nil {
 				var filled = [Int: MagazineSlot]()
+				var leadRowEnd: Int? // A short lead ends early; the briefs below it move up
 				let order = blockSpec.slots.indices.sorted { blockSpec.slots[$0].kind.priority < blockSpec.slots[$1].kind.priority }
 
 				for index in order {
@@ -258,16 +280,28 @@ struct MagazineBlock: Identifiable {
 						if style == .photo {
 							photoItem = item
 						}
+						var area = area
+						var imageFraction = imageFraction
+						switch style {
+						case .lead:
+							area = MagazineArea(area.row, area.column, fittingRowEnd(forLead: item, in: area, columns: columns), area.columnEnd)
+							leadRowEnd = area.rowEnd
+						case .hero, .feature:
+							imageFraction = fittingImageFraction(for: item, style: style, in: area, columns: columns, dropCap: dropCap, minimum: imageFraction)
+						default:
+							break
+						}
 						filled[index] = .module(style: style, area: area, item: item, imageFraction: imageFraction, columns: columns, dropCap: dropCap)
 					case let .storyOfPhoto(style, area, columns, dropCap):
 						if let item = photoItem {
 							filled[index] = .module(style: style, area: area, item: item, imageFraction: 0, columns: columns, dropCap: dropCap)
 						}
 					case let .briefs(area, count, columns, title):
-						var items = [MagazineItem]()
-						while items.count < count, let item = take(&queue, .brief) {
-							items.append(item)
+						var area = area
+						if let leadRowEnd, leadRowEnd < area.row {
+							area = MagazineArea(leadRowEnd, area.column, area.rowEnd, area.columnEnd)
 						}
+						let items = takeBriefs(&queue, in: area, columns: columns, title: title, limit: count * 2)
 						if !items.isEmpty {
 							filled[index] = .briefs(area: area, items: items, columns: columns, title: title)
 						}
@@ -309,21 +343,80 @@ private extension MagazineLayout {
 	}
 
 	static func take(_ queue: inout [MagazineItem], _ kind: Kind) -> MagazineItem? {
+		index(in: queue, for: kind).map { queue.remove(at: $0) }
+	}
+
+	static func index(in queue: [MagazineItem], for kind: Kind) -> Int? {
 		guard !queue.isEmpty else {
 			return nil
 		}
 		let window = queue.prefix(lookahead)
 		if let index = window.firstIndex(where: kind.matches) {
-			return queue.remove(at: index)
+			return index
 		}
 		// Nothing long enough: the slot that wants text gets the most text there is.
 		if case .longWithImage = kind, let index = window.firstIndex(where: Kind.long.matches) {
-			return queue.remove(at: index)
+			return index
 		}
 		if kind == .long || kind == .longWithImage, let longest = window.indices.max(by: { queue[$0].text.count < queue[$1].text.count }) {
-			return queue.remove(at: longest)
+			return longest
 		}
-		return queue.remove(at: queue.startIndex)
+		return queue.startIndex
+	}
+
+	static let minimumLeadRows = 4
+	static let maximumImageFraction: CGFloat = 0.66
+
+	/// A lead with little text gets fewer rows, so it doesn’t sit in a half-empty box. The briefs below take the rest.
+	static func fittingRowEnd(forLead item: MagazineItem, in area: MagazineArea, columns: Int) -> Int {
+		let metrics = MagazineFit.metrics
+		let padding = MagazineFit.tintPadding * 2 // The lead is its block’s first text-only module, so it carries the wash
+		let width = metrics.frame(for: area).width - padding
+		let needed = MagazineFit.stackHeight(style: .lead, item: item, width: width, columns: columns, dropCap: true) + padding
+		for rowEnd in (area.row + minimumLeadRows)..<area.rowEnd {
+			if metrics.frame(for: MagazineArea(area.row, area.column, rowEnd, area.columnEnd)).height >= needed {
+				return rowEnd
+			}
+		}
+		return area.rowEnd
+	}
+
+	/// An image above a short text grows into the room the text leaves.
+	static func fittingImageFraction(for item: MagazineItem, style: MagazineModuleStyle, in area: MagazineArea, columns: Int, dropCap: Bool, minimum: CGFloat) -> CGFloat {
+		guard item.hasImage, minimum > 0 else {
+			return minimum
+		}
+		let metrics = MagazineFit.metrics
+		let frame = metrics.frame(for: area)
+		let needed = MagazineFit.stackHeight(style: style, item: item, width: frame.width, columns: columns, dropCap: dropCap)
+		let fraction = (frame.height - metrics.size(0.012) - needed) / frame.height
+		return min(max(minimum, fraction), maximumImageFraction)
+	}
+
+	/// As many briefs as fit, each with a few lines of text: short ones leave room for more.
+	static func takeBriefs(_ queue: inout [MagazineItem], in area: MagazineArea, columns: Int, title: String?, limit: Int) -> [MagazineItem] {
+		let metrics = MagazineFit.metrics
+		let frame = metrics.frame(for: area)
+		let columnWidth = (frame.width - CGFloat(columns - 1) * metrics.columnGap) / CGFloat(columns)
+		var available = frame.height - 2 - metrics.size(0.012) - metrics.size(0.006) // The rule on top, the paddings
+		if title != nil {
+			available -= ceil(metrics.size(0.022) * 1.25) + metrics.size(0.012)
+		}
+		var items = [MagazineItem]()
+		var rowHeight: CGFloat = 0
+		while items.count < limit, let index = index(in: queue, for: .brief) {
+			if items.count % columns == 0 {
+				available -= rowHeight
+				rowHeight = 0
+			}
+			let height = MagazineFit.briefHeight(queue[index], width: columnWidth, showsRule: items.count >= columns, maxLines: 2)
+			if max(rowHeight, height) > available && !items.isEmpty {
+				break
+			}
+			rowHeight = max(rowHeight, height)
+			items.append(queue.remove(at: index))
+		}
+		return items
 	}
 
 	/// Never the same group twice in a row, so the magazine alternates between heavy and light.
